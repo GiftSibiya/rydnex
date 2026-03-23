@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "vehicle_id": 1,
+    "reading_km": 58000,
+    "logged_at": "2026-03-18T09:00:00.000Z",
+    "note": "Weekly update"
+  }
+]

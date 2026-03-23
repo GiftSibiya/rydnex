@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "vehicle_id": 1,
+    "repair_type": "Front Brake Pads",
+    "repair_km": 54000,
+    "repair_date": "2026-01-20T11:00:00.000Z",
+    "cost": 1800,
+    "notes": "Pads replaced"
+  }
+]

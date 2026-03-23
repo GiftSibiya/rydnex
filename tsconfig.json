@@ -5,6 +5,7 @@
     "baseUrl": "./",
     "moduleResolution": "bundler",
     "module": "ESNext",
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "paths": {
       "@/*": [

@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "vehicle_id": 1,
+    "check_type": "oil",
+    "status": "good",
+    "checked_at": "2026-03-19T07:30:00.000Z",
+    "note": "Level normal"
+  },
+  {
+    "id": 2,
+    "vehicle_id": 1,
+    "check_type": "tyre_pressure",
+    "status": "attention",
+    "checked_at": "2026-03-19T07:35:00.000Z",
+    "note": "Front right low"
+  }
+]

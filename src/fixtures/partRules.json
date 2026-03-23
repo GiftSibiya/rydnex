@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "vehicle_id": 1,
+    "part_name": "Brake Pads",
+    "last_change_km": 54000,
+    "expected_life_km": 10000,
+    "warning_threshold_km": 4000
+  }
+]

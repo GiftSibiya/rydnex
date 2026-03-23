@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -19,6 +21,7 @@
     "@react-navigation/stack": "^7.1.1",
     "babel-preset-expo": "~54.0.10",
     "expo": "~54.0.33",
+    "expo-constants": "^55.0.9",
     "expo-dev-client": "~6.0.20",
     "expo-font": "~14.0.11",
     "expo-image-picker": "~17.0.10",
@@ -42,6 +45,10 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.1.10",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "jest-expo": "^54.0.12",
+    "ts-jest": "^29.4.4",
     "typescript": "~5.9.2"
   },
   "private": true

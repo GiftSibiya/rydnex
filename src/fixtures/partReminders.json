@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "vehicle_id": 1,
+    "part_name": "Brake Pads",
+    "due_at_km": 64000,
+    "remaining_km": 6000,
+    "status": "ok"
+  }
+]
