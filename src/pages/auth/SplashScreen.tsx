@@ -74,7 +74,7 @@ const SplashScreen: React.FC<Props> = ({ onDone }) => {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#050505" />
+      <StatusBar barStyle="light-content" backgroundColor="#281C59" />
 
       {/* Decorative speed stripes — top right */}
       <Animated.View style={[styles.stripes, stripesStyle]}>
@@ -93,7 +93,7 @@ const SplashScreen: React.FC<Props> = ({ onDone }) => {
       {/* Center brand */}
       <View style={styles.center}>
         <Animated.View style={iconStyle}>
-          <MaterialIcons name="speed" size={48} color="#F8F8F4" style={styles.icon} />
+          <MaterialIcons name="speed" size={48} color="#EDF7BD" style={styles.icon} />
         </Animated.View>
 
         <Animated.Text style={[styles.wordmark, wordmarkStyle]}>
@@ -123,7 +123,7 @@ export default SplashScreen;
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#050505',
+    backgroundColor: '#281C59',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -147,8 +147,8 @@ const styles = StyleSheet.create({
   },
   stripe: {
     height: 1.5,
-    backgroundColor: '#F8F8F4',
-    opacity: 0.1,
+    backgroundColor: '#EDF7BD',
+    opacity: 0.12,
   },
   stripe1: { width: 72 },
   stripe2: { width: 52 },
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   wordmark: {
     fontFamily: FONT_FAMILY.nexaBold,
     fontSize: 66,
-    color: '#F8F8F4',
+    color: '#EDF7BD',
     letterSpacing: 3,
     lineHeight: 74,
   },
@@ -179,12 +179,12 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#C8181D',
+    backgroundColor: '#85C79A',
   },
   tagline: {
     fontFamily: FONT_FAMILY.poppinsRegular,
     fontSize: 10,
-    color: '#505050',
+    color: '#4E8D9C',
     letterSpacing: 4.5,
   },
 
@@ -195,11 +195,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#151515',
+    backgroundColor: '#3D2E7A',
     overflow: 'hidden',
   },
   progressFill: {
     height: 2,
-    backgroundColor: '#C8181D',
+    backgroundColor: '#85C79A',
   },
 });

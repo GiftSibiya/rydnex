@@ -4,6 +4,8 @@ import { ColorSchemeName } from 'react-native';
 export interface AppThemeColors {
   primary: string;
   secondary: string;
+  tertiary: string;
+  quaternary: string;
   background: string;
   surface: string;
   surfaceAlt: string;
@@ -19,8 +21,10 @@ export interface AppThemeColors {
 }
 
 export const LIGHT_COLORS: AppThemeColors = {
-  primary: '#121212',
-  secondary: '#2C2C2C',
+  primary: '#281C59',
+  secondary: '#4E8D9C',
+  tertiary: '#85C79A',
+  quaternary: '#EDF7BD',
   background: '#F0F0F0',
   surface: '#FFFFFF',
   surfaceAlt: '#E7E7E7',
@@ -36,8 +40,10 @@ export const LIGHT_COLORS: AppThemeColors = {
 };
 
 export const DARK_COLORS: AppThemeColors = {
-  primary: '#E1E1E1',
-  secondary: '#7A7A7A',
+  primary: '#281C59',
+  secondary: '#4E8D9C',
+  tertiary: '#85C79A',
+  quaternary: '#EDF7BD',
   background: '#050505',
   surface: '#111111',
   surfaceAlt: '#181818',

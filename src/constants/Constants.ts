@@ -1,8 +1,10 @@
 import poppinsRegular from '@assets/fonts/poppins/Poppins-Regular.ttf';
 
 export const COLORS = {
-  primary: "#B87C4C",
-  secondary: "#F7F1DE",
+  primary: "#281C59",
+  secondary: "#4E8D9C",
+  tertiary: "#85C79A",
+  quaternary: "#EDF7BD",
   background: "#F5F5F5",
   Grey: '#999999',
   lightGrey: '#E5E5E5',

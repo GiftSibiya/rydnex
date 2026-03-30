@@ -10,6 +10,8 @@ import { AuthStore } from '@/stores/StoresIndex';
 import SplashScreen from '@/pages/auth/SplashScreen';
 import LoginScreen from '@/pages/auth/LoginScreen';
 import RegistrationScreen from '@/pages/auth/RegistrationScreen';
+import RegistrationOtpScreen from '@/pages/auth/RegistrationOtpScreen';
+import ForgotPasswordScreen from '@/pages/auth/ForgotPasswordScreen';
 
 //
 import DashboardScreen from '@/features/home/screens/DashboardScreen';
@@ -29,6 +31,8 @@ const AuthNavigator = () => (
   <AuthStack.Navigator screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="Login" component={LoginScreen} />
     <AuthStack.Screen name="Register" component={RegistrationScreen} />
+    <AuthStack.Screen name="RegistrationOtp" component={RegistrationOtpScreen} />
+    <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
   </AuthStack.Navigator>
 );
 
