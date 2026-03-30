@@ -13,7 +13,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { ErrorBoundary } from "components/ErrorBoundary";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { AuthProvider } from "contexts/AuthContext";
 import { VehicleProvider } from "contexts/VehicleContext";
 import Colors from "../src/constants/colors";

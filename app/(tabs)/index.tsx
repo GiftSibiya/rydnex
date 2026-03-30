@@ -10,11 +10,11 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import CheckItem from "components/CheckItem";
-import LuxCard from "components/LuxCard";
-import MetricCard from "components/MetricCard";
-import SectionHeader from "components/SectionHeader";
-import VehicleSelector from "components/VehicleSelector";
+import CheckItem from "@/components/items/CheckItem";
+import LuxCard from "@/components/elements/LuxCard";
+import MetricCard from "@/components/elements/MetricCard";
+import SectionHeader from "@/components/elements/SectionHeader";
+import VehicleSelector from "@/components/elements/VehicleSelector";
 import Colors from "../../src/constants/colors";
 import { useVehicle } from "contexts/VehicleContext";
 

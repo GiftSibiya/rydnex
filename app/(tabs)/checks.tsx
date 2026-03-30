@@ -8,9 +8,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import CheckItem from "components/CheckItem";
-import LuxCard from "components/LuxCard";
-import VehicleSelector from "components/VehicleSelector";
+import CheckItem from "@/components/items/CheckItem";
+import LuxCard from "@/components/elements/LuxCard";
+import VehicleSelector from "@/components/elements/VehicleSelector";
 import Colors from "../../src/constants/colors";
 import { useVehicle } from "contexts/VehicleContext";
 

@@ -14,9 +14,9 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import GoldButton from "components/GoldButton";
-import LuxCard from "components/LuxCard";
-import LuxInput from "components/LuxInput";
+import GoldButton from "@/components/elements/GoldButton";
+import LuxCard from "@/components/elements/LuxCard";
+import LuxInput from "@/components/elements/LuxInput";
 import Colors from "../../src/constants/colors";
 import { Vehicle, useVehicle } from "contexts/VehicleContext";
 

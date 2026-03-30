@@ -8,8 +8,8 @@ import {
   View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import GoldButton from "components/GoldButton";
-import LuxInput from "components/LuxInput";
+import GoldButton from "@/components/elements/GoldButton";
+import LuxInput from "@/components/elements/LuxInput";
 import Colors from "../../src/constants/colors";
 import { useVehicle } from "contexts/VehicleContext";
 

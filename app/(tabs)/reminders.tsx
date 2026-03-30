@@ -12,10 +12,10 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import GoldButton from "components/GoldButton";
-import LuxInput from "components/LuxInput";
-import ReminderItem from "components/ReminderItem";
-import VehicleSelector from "components/VehicleSelector";
+import GoldButton from "@/components/elements/GoldButton";
+import LuxInput from "@/components/elements/LuxInput";
+import ReminderItem from "@/components/items/ReminderItem";
+import VehicleSelector from "@/components/elements/VehicleSelector";
 import Colors from "../../src/constants/colors";
 import { useVehicle } from "contexts/VehicleContext";
 

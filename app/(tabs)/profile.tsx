@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import LuxCard from "components/LuxCard";
+import LuxCard from "@/components/elements/LuxCard";
 import Colors from "../../src/constants/colors";
 import { useAuth } from "contexts/AuthContext";
 import { useVehicle } from "contexts/VehicleContext";

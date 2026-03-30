@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Colors from "../src/constants/colors";
+import Colors from "../../constants/colors";
 import { useVehicle } from "contexts/VehicleContext";
 
 const C = Colors.dark;
