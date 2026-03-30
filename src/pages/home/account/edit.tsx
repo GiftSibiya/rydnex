@@ -13,7 +13,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "../../src/constants/colors";
+import Colors from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 
 const C = Colors.dark;

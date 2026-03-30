@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import GoldButton from "@/components/elements/GoldButton";
 import LuxInput from "@/components/elements/LuxInput";
-import Colors from "../../src/constants/colors";
+import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
 
 const C = Colors.dark;

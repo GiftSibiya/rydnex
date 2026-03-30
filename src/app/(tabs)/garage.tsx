@@ -5,45 +5,21 @@ import {
   Alert,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import GoldButton from "@/components/elements/GoldButton";
 import LuxCard from "@/components/elements/LuxCard";
 import LuxInput from "@/components/elements/LuxInput";
+import VehiclePickerModal from "@/components/elements/VehiclePickerModal";
 import Colors from "@/constants/colors";
 import { Vehicle, useVehicle } from "@/contexts/VehicleContext";
 
 const C = Colors.dark;
-
-const MAKES = [
-  "Audi",
-  "BMW",
-  "Ford",
-  "Honda",
-  "Hyundai",
-  "Kia",
-  "Land Rover",
-  "Lexus",
-  "Mazda",
-  "Mercedes-Benz",
-  "Mitsubishi",
-  "Nissan",
-  "Porsche",
-  "Renault",
-  "Subaru",
-  "Suzuki",
-  "Tesla",
-  "Toyota",
-  "Volkswagen",
-  "Volvo",
-];
 
 const currentYear = new Date().getFullYear();
 
@@ -52,6 +28,7 @@ export default function GarageScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [showAdd, setShowAdd] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [form, setForm] = useState({
     make: "",
     model: "",
@@ -212,10 +189,16 @@ export default function GarageScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowAdd(false)}
       >
-        <KeyboardAwareScrollView
+        <VehiclePickerModal
+          visible={pickerVisible}
+          onClose={() => setPickerVisible(false)}
+          onConfirm={(make, model, year) =>
+            setForm((f) => ({ ...f, make, model, year: String(year) }))
+          }
+        />
+        <ScrollView
           style={styles.modal}
           contentContainerStyle={styles.modalContent}
-          bottomOffset={20}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.modalHeader}>
@@ -226,30 +209,46 @@ export default function GarageScreen() {
           </View>
 
           <View style={styles.formGrid}>
-            <LuxInput
-              label="Make"
-              placeholder="e.g. Toyota"
-              value={form.make}
-              onChangeText={(t) => setForm((f) => ({ ...f, make: t }))}
-              error={errors.make}
-              autoCapitalize="words"
-            />
-            <LuxInput
-              label="Model"
-              placeholder="e.g. Corolla"
-              value={form.model}
-              onChangeText={(t) => setForm((f) => ({ ...f, model: t }))}
-              error={errors.model}
-              autoCapitalize="words"
-            />
-            <LuxInput
-              label="Year"
-              placeholder="e.g. 2021"
-              value={form.year}
-              onChangeText={(t) => setForm((f) => ({ ...f, year: t }))}
-              keyboardType="numeric"
-              error={errors.year}
-            />
+            <View style={styles.pickerFieldWrap}>
+              <Text style={styles.pickerFieldLabel}>Vehicle</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerField,
+                  (errors.make || errors.model || errors.year) && styles.pickerFieldError,
+                  !!(form.make && form.model && form.year) && styles.pickerFieldFilled,
+                ]}
+                onPress={() => setPickerVisible(true)}
+                activeOpacity={0.75}
+              >
+                <Text
+                  style={[
+                    styles.pickerFieldText,
+                    !(form.make && form.model && form.year) && styles.pickerFieldPlaceholder,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {form.make && form.model && form.year
+                    ? `${form.year} ${form.make} ${form.model}`
+                    : "Select make, model & year"}
+                </Text>
+                <View style={styles.pickerFieldRight}>
+                  {form.make ? (
+                    <TouchableOpacity
+                      onPress={() => setForm((f) => ({ ...f, make: "", model: "", year: String(currentYear) }))}
+                      hitSlop={8}
+                    >
+                      <Feather name="x" size={14} color={C.textMuted} />
+                    </TouchableOpacity>
+                  ) : null}
+                  <Feather name="chevron-right" size={16} color={form.make ? C.tint : C.textSubtle} />
+                </View>
+              </TouchableOpacity>
+              {(errors.make || errors.model || errors.year) && (
+                <Text style={styles.pickerFieldErrorText}>
+                  {errors.make || errors.model || errors.year}
+                </Text>
+              )}
+            </View>
             <LuxInput
               label="Registration"
               placeholder="e.g. CA123456"
@@ -286,7 +285,7 @@ export default function GarageScreen() {
             onPress={handleAdd}
             loading={loading}
           />
-        </KeyboardAwareScrollView>
+        </ScrollView>
       </Modal>
     </View>
   );
@@ -419,5 +418,40 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   formGrid: { gap: 14 },
+  pickerFieldWrap: { gap: 6 },
+  pickerFieldLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: C.textMuted,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  pickerField: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: C.surfaceElevated,
+    borderWidth: 1,
+    borderColor: C.surfaceBorder,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    gap: 8,
+  },
+  pickerFieldError: { borderColor: C.danger },
+  pickerFieldFilled: { borderColor: "rgba(46,204,113,0.35)" },
+  pickerFieldText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: C.text,
+  },
+  pickerFieldPlaceholder: { color: C.textSubtle },
+  pickerFieldRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  pickerFieldErrorText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: C.dangerLight,
+  },
 });
 
