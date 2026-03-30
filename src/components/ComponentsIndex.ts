@@ -11,6 +11,8 @@ export { default as SectionHeader } from './elements/SectionHeader';
 export { default as VehicleSelector } from './elements/VehicleSelector';
 export { default as LuxCard } from './elements/LuxCard';
 export { default as LuxInput } from './elements/LuxInput';
+export { default as FuelLevelGauge } from './elements/FuelLevelGauge';
 
 // ---------- BUTTONS ---------- //
 export { default as GoldButton } from './elements/GoldButton';
+export { default as AppButton } from './buttons/AppButton';

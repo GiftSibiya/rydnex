@@ -1,13 +1,13 @@
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import GoldButton from "@/components/elements/GoldButton";
 import LuxInput from "@/components/elements/LuxInput";
 import Colors from "@/constants/colors";
@@ -16,9 +16,11 @@ import { useVehicle } from "@/contexts/VehicleContext";
 const C = Colors.dark;
 
 export default function ServiceLogScreen() {
+  const params = useLocalSearchParams<{ type?: string }>();
   const { activeVehicle, addServiceLog } = useVehicle();
   const router = useRouter();
-  const [type, setType] = useState<"service" | "repair">("service");
+  const initialType = params.type === "repair" ? "repair" : "service";
+  const [type, setType] = useState<"service" | "repair">(initialType);
   const [form, setForm] = useState({
     description: "",
     cost: "",
@@ -60,10 +62,9 @@ export default function ServiceLogScreen() {
   const iconColor = type === "repair" ? C.danger : C.tint;
 
   return (
-    <KeyboardAwareScrollView
+    <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      bottomOffset={20}
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.iconRow}>
@@ -142,7 +143,7 @@ export default function ServiceLogScreen() {
       </View>
 
       <GoldButton label="Save Entry" onPress={handleSave} loading={loading} />
-    </KeyboardAwareScrollView>
+    </ScrollView>
   );
 }
 

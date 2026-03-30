@@ -64,6 +64,18 @@ export type PartRule = {
   lastReplacedDate: string;
 };
 
+export type LicenseDisk = {
+  vehicleId: string;
+  licenseNo: string;
+  expiryDate: string;
+  vin: string;
+  engineNumber: string;
+  licenseNumber: string;
+  registerNumber: string;
+  fees: number;
+  dateOfTest: string;
+};
+
 type VehicleContextType = {
   vehicles: Vehicle[];
   activeVehicle: Vehicle | null;
@@ -72,6 +84,7 @@ type VehicleContextType = {
   serviceLogs: ServiceLog[];
   lastChecks: LastCheck[];
   partRules: PartRule[];
+  licenseDisk: (vehicleId: string) => LicenseDisk | undefined;
   setActiveVehicle: (v: Vehicle) => void;
   addVehicle: (v: Omit<Vehicle, "id" | "createdAt">) => Promise<boolean>;
   updateVehicle: (id: string, data: Partial<Vehicle>) => Promise<void>;
@@ -85,6 +98,7 @@ type VehicleContextType = {
   addPartRule: (rule: Omit<PartRule, "id">) => Promise<void>;
   updatePartRule: (id: string, data: Partial<PartRule>) => Promise<void>;
   deletePartRule: (id: string) => Promise<void>;
+  upsertLicenseDisk: (disk: LicenseDisk) => Promise<void>;
   getEfficiencyMetrics: (vehicleId: string) => { avgKmPerL: number; avgCostPerKm: number; totalFuelCost: number };
   FREE_TIER_LIMIT: number;
 };
@@ -99,6 +113,7 @@ const STORAGE_KEYS = {
   serviceLogs: "rydnex_service_logs",
   lastChecks: "rydnex_last_checks",
   partRules: "rydnex_part_rules",
+  licenseDisks: "rydnex_license_disks",
 };
 
 const FREE_TIER_LIMIT = 2;
@@ -131,11 +146,12 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
   const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
   const [lastChecks, setLastChecks] = useState<LastCheck[]>([]);
   const [partRules, setPartRules] = useState<PartRule[]>([]);
+  const [licenseDisks, setLicenseDisks] = useState<LicenseDisk[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [v, activeId, odo, fuel, svc, checks, rules] = await Promise.all([
+      const [v, activeId, odo, fuel, svc, checks, rules, disks] = await Promise.all([
         load<Vehicle[]>(STORAGE_KEYS.vehicles, []),
         load<string | null>(STORAGE_KEYS.activeVehicleId, null),
         load<OdometerLog[]>(STORAGE_KEYS.odometerLogs, []),
@@ -143,6 +159,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         load<ServiceLog[]>(STORAGE_KEYS.serviceLogs, []),
         load<LastCheck[]>(STORAGE_KEYS.lastChecks, []),
         load<PartRule[]>(STORAGE_KEYS.partRules, []),
+        load<LicenseDisk[]>(STORAGE_KEYS.licenseDisks, []),
       ]);
       setVehicles(v);
       setOdometerLogs(odo);
@@ -150,6 +167,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       setServiceLogs(svc);
       setLastChecks(checks);
       setPartRules(rules);
+      setLicenseDisks(disks);
       if (v.length > 0) {
         const active = activeId ? v.find((x) => x.id === activeId) ?? v[0] : v[0];
         setActiveVehicleState(active);
@@ -201,17 +219,20 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
     const updatedSvc = serviceLogs.filter((l) => l.vehicleId !== id);
     const updatedChecks = lastChecks.filter((l) => l.vehicleId !== id);
     const updatedRules = partRules.filter((l) => l.vehicleId !== id);
+    const updatedDisks = licenseDisks.filter((l) => l.vehicleId !== id);
     setOdometerLogs(updatedOdo);
     setFuelLogs(updatedFuel);
     setServiceLogs(updatedSvc);
     setLastChecks(updatedChecks);
     setPartRules(updatedRules);
+    setLicenseDisks(updatedDisks);
     await Promise.all([
       save(STORAGE_KEYS.odometerLogs, updatedOdo),
       save(STORAGE_KEYS.fuelLogs, updatedFuel),
       save(STORAGE_KEYS.serviceLogs, updatedSvc),
       save(STORAGE_KEYS.lastChecks, updatedChecks),
       save(STORAGE_KEYS.partRules, updatedRules),
+      save(STORAGE_KEYS.licenseDisks, updatedDisks),
     ]);
   }, [vehicles, activeVehicle, odometerLogs, fuelLogs, serviceLogs, lastChecks, partRules]);
 
@@ -285,6 +306,19 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
     await save(STORAGE_KEYS.partRules, updated);
   }, [partRules]);
 
+  const upsertLicenseDisk = useCallback(async (disk: LicenseDisk) => {
+    const exists = licenseDisks.some((d) => d.vehicleId === disk.vehicleId);
+    const updated = exists
+      ? licenseDisks.map((d) => d.vehicleId === disk.vehicleId ? disk : d)
+      : [...licenseDisks, disk];
+    setLicenseDisks(updated);
+    await save(STORAGE_KEYS.licenseDisks, updated);
+  }, [licenseDisks]);
+
+  const licenseDisk = useCallback((vehicleId: string) => {
+    return licenseDisks.find((d) => d.vehicleId === vehicleId);
+  }, [licenseDisks]);
+
   const getEfficiencyMetrics = useCallback((vehicleId: string) => {
     const vFuel = fuelLogs.filter((f) => f.vehicleId === vehicleId);
     if (vFuel.length === 0) return { avgKmPerL: 0, avgCostPerKm: 0, totalFuelCost: 0 };
@@ -319,6 +353,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       setActiveVehicle, addVehicle, updateVehicle, deleteVehicle,
       addOdometerLog, addFuelLog, addServiceLog, deleteServiceLog, deleteFuelLog,
       updateLastCheck, addPartRule, updatePartRule, deletePartRule,
+      upsertLicenseDisk, licenseDisk,
       getEfficiencyMetrics, FREE_TIER_LIMIT,
     }}>
       {children}

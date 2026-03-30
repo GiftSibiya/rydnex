@@ -3,17 +3,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
+import AppButton from "@/components/buttons/AppButton";
 
 const C = Colors.dark;
 
@@ -43,20 +45,24 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAwareScrollView
+    <KeyboardAvoidingView
       style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: botPad + 40 }]}
-      bottomOffset={24}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
     >
-      <TouchableOpacity
-        style={styles.backBtn}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[styles.content, { paddingTop: topPad + 16, paddingBottom: botPad + 40 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Feather name="arrow-left" size={20} color={C.text} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Feather name="arrow-left" size={20} color={C.text} />
+        </TouchableOpacity>
 
       <View style={styles.header}>
         <LinearGradient
@@ -128,59 +134,39 @@ export default function LoginScreen() {
           </View>
         ) : null}
 
-        <TouchableOpacity
-          style={[styles.loginBtn, loading && { opacity: 0.7 }]}
+        <AppButton
+          label="Sign In"
+          rightIcon="arrow-right"
+          loading={loading}
           onPress={handleLogin}
-          activeOpacity={0.85}
-          disabled={loading}
-        >
-          <LinearGradient
-            colors={[GREEN, GREEN_DARK]}
-            style={styles.loginBtnGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            {loading ? (
-              <Text style={styles.loginBtnText}>Signing in…</Text>
-            ) : (
-              <>
-                <Text style={styles.loginBtnText}>Sign In</Text>
-                <Feather name="arrow-right" size={18} color="#fff" />
-              </>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+          gradient
+          fullWidth
+          size="lg"
+          style={styles.loginBtn}
+        />
 
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>or</Text>
           <View style={styles.dividerLine} />
         </View>
-
-        <TouchableOpacity
-          style={styles.guestBtn}
-          onPress={handleLogin}
-          activeOpacity={0.8}
-        >
-          <Feather name="user" size={16} color={C.tint} />
-          <Text style={styles.guestBtnText}>Continue as Guest</Text>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Don't have an account? </Text>
-        <TouchableOpacity activeOpacity={0.7}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => router.push("/register")}>
           <Text style={styles.footerLink}>Create one</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.securityNote}>
-        <Feather name="shield" size={13} color={C.textSubtle} />
-        <Text style={styles.securityText}>
-          Your data stays on your device. No cloud sync yet.
-        </Text>
-      </View>
-    </KeyboardAwareScrollView>
+        <View style={styles.securityNote}>
+          <Feather name="shield" size={13} color={C.textSubtle} />
+          <Text style={styles.securityText}>
+            Your data stays on your device. No cloud sync yet.
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -266,26 +252,11 @@ const styles = StyleSheet.create({
     color: C.danger,
   },
   loginBtn: {
-    borderRadius: 14,
-    overflow: "hidden",
     shadowColor: GREEN,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 6,
-  },
-  loginBtnGradient: {
-    height: 54,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  loginBtnText: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    letterSpacing: 0.1,
   },
   dividerRow: {
     flexDirection: "row",

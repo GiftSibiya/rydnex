@@ -1,1 +1,1 @@
-export { default } from "@/pages/home/log/fuel";
+export { default } from "@/pages/home/garage/subpages/FuelLogScreen";

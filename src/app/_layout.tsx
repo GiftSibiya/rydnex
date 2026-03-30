@@ -6,15 +6,16 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Platform } from "react-native";
 
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { VehicleProvider } from "@/contexts/VehicleContext";
 import Colors from "@/constants/colors";
 
@@ -25,6 +26,20 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const { isLoggedIn } = useAuth();
+  const router = useRouter();
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    if (!isLoggedIn) {
+      router.replace("/");
+    }
+  }, [isLoggedIn]);
+
   return (
     <Stack
       screenOptions={{
@@ -38,7 +53,11 @@ function RootLayoutNav() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="register" options={{ headerShown: false }} />
+      <Stack.Screen name="register-otp" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="reminders" options={{ title: "Reminders" }} />
+      <Stack.Screen name="service-details" options={{ title: "Service Details" }} />
       <Stack.Screen name="log/fuel" options={{ title: "Fuel Log", presentation: "modal" }} />
       <Stack.Screen name="log/service" options={{ title: "Service / Repair", presentation: "modal" }} />
       <Stack.Screen name="log/odometer" options={{ title: "Odometer", presentation: "modal" }} />
@@ -68,13 +87,17 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <AuthProvider>
-                <VehicleProvider>
+            <AuthProvider>
+              <VehicleProvider>
+                {Platform.OS === "web" ? (
                   <RootLayoutNav />
-                </VehicleProvider>
-              </AuthProvider>
-            </KeyboardProvider>
+                ) : (
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                )}
+              </VehicleProvider>
+            </AuthProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
       </ErrorBoundary>
