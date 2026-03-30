@@ -1,28 +1,23 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "baseUrl": ".",
     "strict": true,
-    "baseUrl": "./",
-    "moduleResolution": "bundler",
-    "module": "ESNext",
-    "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": [
-        "src/*"
-      ],
-      "@assets/*": [
-        "assets/*"
-      ],
-      "@screens/*": [
-        "src/screens/*"
+        "./src/*"
       ]
     }
   },
   "include": [
-    "./**/*.tsx",
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/types/assets.d.ts"
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+  "references": [
+    {
+      "path": "../../lib/api-client-react"
+    }
   ]
 }

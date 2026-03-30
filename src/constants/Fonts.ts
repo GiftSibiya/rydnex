@@ -1,17 +1,13 @@
-import poppinsRegular from '@assets/fonts/poppins/Poppins-Regular.ttf';
-import nexaRegular from '@assets/fonts/nexa/Nexa_Regular.otf';
-import nexaBold from '@assets/fonts/nexa/Nexa Bold.otf';
-
-export const FONT = {
-  POPPIN_REGULAR: poppinsRegular,
-  NEXA_REGULAR: nexaRegular,
-  NEXA_BOLD: nexaBold,
-};
+// NOTE: The upstream project expects custom font assets under `assets/fonts/*`.
+// Those assets aren't present in this checkout, so we use safe fallbacks to
+// keep Expo Go functional.
+export const FONT = {};
 
 export const FONT_FAMILY = {
-  poppinsRegular: 'Poppins-Regular',
-  nexaRegular: 'Nexa_Regular',
-  nexaBold: 'Nexa Bold',
+  // Fall back to system fonts if custom font files aren't bundled.
+  poppinsRegular: 'System',
+  nexaRegular: 'System',
+  nexaBold: 'System',
 };
 
 export const FONT_SIZE = {

@@ -3,13 +3,6 @@
 # dependencies
 node_modules/
 
-# Claude
-.mcp.json
-.claude/
-
-# Cursor
-.cursor/
-
 # Expo
 .expo/
 dist/
@@ -17,16 +10,14 @@ web-build/
 expo-env.d.ts
 
 # Native
-.kotlin/
+ios/
+android/
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
-
-# Skaftin
-client-sdk-mobile
 
 # Metro
 .metro-health-check*
@@ -45,12 +36,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+.vercel
 
-# generated native folders
-/ios
-/android
-
-# Environment variables
 .env
-.env.*
-!.env.example
