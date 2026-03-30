@@ -7,6 +7,7 @@
     "dev": "expo start --localhost",
     "start": "expo start --localhost",
     "build": "node scripts/build.js",
+    "build:vehicle-json": "node scripts/build-vehicle-json.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -16,19 +16,17 @@ import CAR_LOGOS from "@/constants/carLogos";
 import Colors from "../../constants/colors";
 import vehicleMakesData from "../../../assets/json/vehicleMakes.json";
 import vehicleModelsData from "../../../assets/json/vehicleModels.json";
-import vehicleYearsData from "../../../assets/json/vehicleYears.json";
 
 const C = Colors.dark;
 
 // Step order: make → year → model
 type Step = "make" | "year" | "model";
 
-type Make = { id: string; name: string; country: string };
-type ModelsMap = Record<string, string[]>;
+type Make = { makeId: string; makeName: string; makeSlug: string; countryOfOrigin?: string };
+type Model = { modelId: string; makeId: string; modelName: string; modelSlug: string; modelYear: number };
 
 const MAKES: Make[] = vehicleMakesData as Make[];
-const MODELS: ModelsMap = vehicleModelsData as ModelsMap;
-const YEARS: number[] = vehicleYearsData as number[];
+const MODELS: Model[] = vehicleModelsData as Model[];
 
 const STEP_ORDER: Step[] = ["make", "year", "model"];
 const STEP_LABELS: Record<Step, string> = {
@@ -47,6 +45,7 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>("make");
   const [selectedMakeId, setSelectedMakeId] = useState("");
+  const [selectedMakeSlug, setSelectedMakeSlug] = useState("");
   const [selectedMakeName, setSelectedMakeName] = useState("");
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -54,29 +53,64 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
 
   const stepIndex = STEP_ORDER.indexOf(step);
 
-  const models = useMemo(() => MODELS[selectedMakeId] ?? [], [selectedMakeId]);
+  const yearsByMakeId = useMemo(() => {
+    const byMake = new Map<string, Set<number>>();
+
+    for (const model of MODELS) {
+      if (!byMake.has(model.makeId)) byMake.set(model.makeId, new Set<number>());
+      byMake.get(model.makeId)?.add(model.modelYear);
+    }
+
+    return byMake;
+  }, []);
+
+  const modelNamesByMakeIdAndYear = useMemo(() => {
+    const byKey = new Map<string, Set<string>>();
+
+    for (const model of MODELS) {
+      const key = `${model.makeId}|${model.modelYear}`;
+      if (!byKey.has(key)) byKey.set(key, new Set<string>());
+      byKey.get(key)?.add(model.modelName);
+    }
+
+    return byKey;
+  }, []);
 
   const filteredMakes = useMemo(() => {
     const q = search.toLowerCase();
     return MAKES.filter(
       (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.country.toLowerCase().includes(q)
+        m.makeName.toLowerCase().includes(q) ||
+        (m.countryOfOrigin || "").toLowerCase().includes(q)
     );
   }, [search]);
 
-  const filteredYears = useMemo(() => {
-    return search ? YEARS.filter((y) => y.toString().startsWith(search)) : YEARS;
-  }, [search]);
+  const years = useMemo(() => {
+    if (!selectedMakeId) return [];
+    const list = Array.from(yearsByMakeId.get(selectedMakeId) ?? []);
+    list.sort((a, b) => b - a);
+    return list;
+  }, [selectedMakeId, yearsByMakeId]);
+
+  const filteredYears = useMemo(
+    () => (search ? years.filter((y) => y.toString().startsWith(search)) : years),
+    [search, years]
+  );
 
   const filteredModels = useMemo(() => {
+    if (!selectedMakeId || !selectedYear) return [];
+    const key = `${selectedMakeId}|${selectedYear}`;
+    const models = Array.from(modelNamesByMakeIdAndYear.get(key) ?? []).sort((a, b) =>
+      a.localeCompare(b)
+    );
     const q = search.toLowerCase();
     return models.filter((m) => m.toLowerCase().includes(q));
-  }, [search, models]);
+  }, [search, selectedMakeId, selectedYear, modelNamesByMakeIdAndYear]);
 
   const resetAndClose = useCallback(() => {
     setStep("make");
     setSelectedMakeId("");
+    setSelectedMakeSlug("");
     setSelectedMakeName("");
     setSelectedYear(null);
     setSearch("");
@@ -84,8 +118,10 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   }, [onClose]);
 
   const handleMakeSelect = useCallback((make: Make) => {
-    setSelectedMakeId(make.id);
-    setSelectedMakeName(make.name);
+    setSelectedMakeId(make.makeId);
+    setSelectedMakeSlug(make.makeSlug);
+    setSelectedMakeName(make.makeName);
+    setSelectedYear(null);
     setSearch("");
     setStep("year");
   }, []);
@@ -113,7 +149,7 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
 
   const renderMakeItem = useCallback(
     ({ item }: { item: Make }) => {
-      const logo = CAR_LOGOS[item.id];
+      const logo = CAR_LOGOS[item.makeSlug];
       return (
         <TouchableOpacity
           style={styles.item}
@@ -124,12 +160,12 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
             {logo ? (
               <Image source={logo} style={styles.makeLogo} resizeMode="contain" />
             ) : (
-              <Text style={styles.makeInitialText}>{item.name.charAt(0)}</Text>
+              <Text style={styles.makeInitialText}>{item.makeName.charAt(0)}</Text>
             )}
           </View>
           <View style={styles.itemTextBlock}>
-            <Text style={styles.itemPrimary}>{item.name}</Text>
-            <Text style={styles.itemSecondary}>{item.country}</Text>
+            <Text style={styles.itemPrimary}>{item.makeName}</Text>
+            <Text style={styles.itemSecondary}>{item.countryOfOrigin || "Unknown"}</Text>
           </View>
           <Feather name="chevron-right" size={16} color={C.textSubtle} />
         </TouchableOpacity>
@@ -269,9 +305,9 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
         {/* Breadcrumb */}
         {selectedMakeName ? (
           <View style={styles.breadcrumb}>
-            {CAR_LOGOS[selectedMakeId] ? (
+            {CAR_LOGOS[selectedMakeSlug] ? (
               <Image
-                source={CAR_LOGOS[selectedMakeId]}
+                source={CAR_LOGOS[selectedMakeSlug]}
                 style={styles.breadcrumbLogo}
                 resizeMode="contain"
               />
@@ -313,7 +349,7 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
         <FlatList
           data={listData as any[]}
           keyExtractor={(item) =>
-            typeof item === "object" ? (item as Make).id : String(item)
+            typeof item === "object" ? (item as Make).makeId : String(item)
           }
           renderItem={renderItem}
           keyboardShouldPersistTaps="handled"

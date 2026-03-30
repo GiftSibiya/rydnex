@@ -1,36 +1,374 @@
 [
-  { "id": "audi", "name": "Audi", "country": "Germany" },
-  { "id": "bmw", "name": "BMW", "country": "Germany" },
-  { "id": "mercedes", "name": "Mercedes-Benz", "country": "Germany" },
-  { "id": "volkswagen", "name": "Volkswagen", "country": "Germany" },
-  { "id": "opel", "name": "Opel", "country": "Germany" },
-  { "id": "porsche", "name": "Porsche", "country": "Germany" },
-  { "id": "toyota", "name": "Toyota", "country": "Japan" },
-  { "id": "honda", "name": "Honda", "country": "Japan" },
-  { "id": "nissan", "name": "Nissan", "country": "Japan" },
-  { "id": "mazda", "name": "Mazda", "country": "Japan" },
-  { "id": "mitsubishi", "name": "Mitsubishi", "country": "Japan" },
-  { "id": "suzuki", "name": "Suzuki", "country": "Japan" },
-  { "id": "subaru", "name": "Subaru", "country": "Japan" },
-  { "id": "isuzu", "name": "Isuzu", "country": "Japan" },
-  { "id": "lexus", "name": "Lexus", "country": "Japan" },
-  { "id": "hyundai", "name": "Hyundai", "country": "South Korea" },
-  { "id": "kia", "name": "Kia", "country": "South Korea" },
-  { "id": "ford", "name": "Ford", "country": "USA" },
-  { "id": "chevrolet", "name": "Chevrolet", "country": "USA" },
-  { "id": "jeep", "name": "Jeep", "country": "USA" },
-  { "id": "dodge", "name": "Dodge", "country": "USA" },
-  { "id": "renault", "name": "Renault", "country": "France" },
-  { "id": "peugeot", "name": "Peugeot", "country": "France" },
-  { "id": "citroen", "name": "Citroën", "country": "France" },
-  { "id": "volvo", "name": "Volvo", "country": "Sweden" },
-  { "id": "landrover", "name": "Land Rover", "country": "UK" },
-  { "id": "jaguar", "name": "Jaguar", "country": "UK" },
-  { "id": "mini", "name": "MINI", "country": "UK" },
-  { "id": "haval", "name": "Haval", "country": "China" },
-  { "id": "chery", "name": "Chery", "country": "China" },
-  { "id": "gwm", "name": "GWM", "country": "China" },
-  { "id": "byd", "name": "BYD", "country": "China" },
-  { "id": "fiat", "name": "Fiat", "country": "Italy" },
-  { "id": "alfa", "name": "Alfa Romeo", "country": "Italy" }
+  {
+    "makeId": "ad31e3a7-732e-595e-9415-7127e1b3cda5",
+    "makeName": "ABARTH",
+    "makeSlug": "abarth",
+    "countryOfOrigin": "Italy"
+  },
+  {
+    "makeId": "aea80d07-8095-59a1-bfe4-877b08c646aa",
+    "makeName": "Alfa Romeo",
+    "makeSlug": "alfa-romeo",
+    "countryOfOrigin": "Italy"
+  },
+  {
+    "makeId": "dc0ac4fc-eb1c-59c1-9723-573c83db07f7",
+    "makeName": "Audi",
+    "makeSlug": "audi",
+    "countryOfOrigin": "Germany"
+  },
+  {
+    "makeId": "c41a9b24-c3e4-5330-841e-0ba161aca2f2",
+    "makeName": "BAIC",
+    "makeSlug": "baic",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "36d9bbcc-e069-5941-b6a5-9558d70abcb6",
+    "makeName": "Bentley",
+    "makeSlug": "bentley",
+    "countryOfOrigin": "United Kingdom"
+  },
+  {
+    "makeId": "044f8dd7-05b8-5cca-a371-54d9c159e10e",
+    "makeName": "BMW",
+    "makeSlug": "bmw",
+    "countryOfOrigin": "Germany"
+  },
+  {
+    "makeId": "a2ad440a-dc4a-57af-b838-705adb9ddd7b",
+    "makeName": "CADILLAC",
+    "makeSlug": "cadillac",
+    "countryOfOrigin": "United States"
+  },
+  {
+    "makeId": "0ad4b076-4d4d-5e10-a0bd-4b52ab866e82",
+    "makeName": "CHERY",
+    "makeSlug": "chery",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "4ed46211-bc1f-5b70-99e0-b49cb4b8fff0",
+    "makeName": "Chevrolet",
+    "makeSlug": "chevrolet",
+    "countryOfOrigin": "United States"
+  },
+  {
+    "makeId": "6db8dce0-22e3-55fc-85af-173be0c8a733",
+    "makeName": "Chrysler",
+    "makeSlug": "chrysler",
+    "countryOfOrigin": "United States"
+  },
+  {
+    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
+    "makeName": "CitroÃ«n",
+    "makeSlug": "citroan",
+    "countryOfOrigin": "France"
+  },
+  {
+    "makeId": "b215b315-69a1-525b-b901-b923fa138c9b",
+    "makeName": "Citroen",
+    "makeSlug": "citroen",
+    "countryOfOrigin": "France"
+  },
+  {
+    "makeId": "918fa6a6-983f-5bd9-8f3b-1b4da03eecc3",
+    "makeName": "Daewoo",
+    "makeSlug": "daewoo",
+    "countryOfOrigin": "South Korea"
+  },
+  {
+    "makeId": "d8ec9733-880c-5976-b180-fa9034d33acc",
+    "makeName": "Daihatsu",
+    "makeSlug": "daihatsu",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "4ffcd83d-7596-5ed4-9c5f-1b8d48e25f0d",
+    "makeName": "DATSUN",
+    "makeSlug": "datsun",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "40858cef-8505-547d-ba6e-960c8f91169b",
+    "makeName": "Dodge",
+    "makeSlug": "dodge",
+    "countryOfOrigin": "United States"
+  },
+  {
+    "makeId": "e75afb68-df7a-5702-a5c8-f6a4ed251f2b",
+    "makeName": "FAW",
+    "makeSlug": "faw",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "d187a86e-94b8-5788-9507-b6dedee392ed",
+    "makeName": "Fiat",
+    "makeSlug": "fiat",
+    "countryOfOrigin": "Italy"
+  },
+  {
+    "makeId": "5f72be56-3492-59b2-820e-85e04e346854",
+    "makeName": "Ford",
+    "makeSlug": "ford",
+    "countryOfOrigin": "United States"
+  },
+  {
+    "makeId": "a4e5999e-4855-5f3e-9de5-ab4683513983",
+    "makeName": "FOTON",
+    "makeSlug": "foton",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "ee569caa-ebd9-5f4d-8674-fa8df1626c44",
+    "makeName": "GEELY",
+    "makeSlug": "geely",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "1c1f9d7b-b3bb-5c9e-b986-32e7f330e4d0",
+    "makeName": "GWM",
+    "makeSlug": "gwm",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "e558f2cd-0f0d-51bd-8abb-7a2514301a65",
+    "makeName": "HAVAL",
+    "makeSlug": "haval",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "a47a2b97-1623-5206-b265-4f7d2e28a023",
+    "makeName": "Honda",
+    "makeSlug": "honda",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "5e15c7c6-b1f5-5a0a-b15c-799ffca51dd7",
+    "makeName": "Hummer",
+    "makeSlug": "hummer",
+    "countryOfOrigin": "United States"
+  },
+  {
+    "makeId": "989ebea8-6549-53e1-9d27-c8f2a9089418",
+    "makeName": "Hyundai",
+    "makeSlug": "hyundai",
+    "countryOfOrigin": "South Korea"
+  },
+  {
+    "makeId": "20f9d8f1-5416-5998-9248-083407a5018c",
+    "makeName": "INFINITI",
+    "makeSlug": "infiniti",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "dc8fefba-75d4-5800-ba8b-34d904f3d274",
+    "makeName": "Isuzu",
+    "makeSlug": "isuzu",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "d06473cb-1f9a-5e66-bb41-c0205dcef3e2",
+    "makeName": "IVECO",
+    "makeSlug": "iveco",
+    "countryOfOrigin": "Italy"
+  },
+  {
+    "makeId": "8ac5311e-be52-5f5d-a121-388918fce199",
+    "makeName": "JAC",
+    "makeSlug": "jac",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "53762efb-f364-50b7-9462-d0817c51ba24",
+    "makeName": "Jaguar",
+    "makeSlug": "jaguar",
+    "countryOfOrigin": "United Kingdom"
+  },
+  {
+    "makeId": "79f617f7-2cb0-5c28-9371-eaff99e186ce",
+    "makeName": "Jeep",
+    "makeSlug": "jeep",
+    "countryOfOrigin": "United States"
+  },
+  {
+    "makeId": "1a4a2917-49ea-5ddf-87d6-98b4c2a50609",
+    "makeName": "JMC",
+    "makeSlug": "jmc",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "4e4f4dd8-3da7-5bd7-875d-08ac65ed40a3",
+    "makeName": "Kia",
+    "makeSlug": "kia",
+    "countryOfOrigin": "South Korea"
+  },
+  {
+    "makeId": "82604e88-3d9a-532c-9863-e1879070680f",
+    "makeName": "Land Rover",
+    "makeSlug": "land-rover",
+    "countryOfOrigin": "United Kingdom"
+  },
+  {
+    "makeId": "6b3e7aec-b5a8-53d1-a1aa-c63e56748bf7",
+    "makeName": "Lexus",
+    "makeSlug": "lexus",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "c0dd3285-6d49-5561-a4f0-9f7bf0801ff5",
+    "makeName": "Lotus",
+    "makeSlug": "lotus",
+    "countryOfOrigin": "United Kingdom"
+  },
+  {
+    "makeId": "a964ff86-91e4-57c6-ab42-ea2b073ef628",
+    "makeName": "Mahindra",
+    "makeSlug": "mahindra",
+    "countryOfOrigin": "India"
+  },
+  {
+    "makeId": "78d9c127-5800-56d8-bbf7-b5bb9fb1b8f2",
+    "makeName": "MASERATI",
+    "makeSlug": "maserati",
+    "countryOfOrigin": "Italy"
+  },
+  {
+    "makeId": "4d0ff8b9-51f1-5d21-bfbb-8623a2b502dc",
+    "makeName": "Mazda",
+    "makeSlug": "mazda",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "57430887-e174-53a7-98a4-0ab371b82321",
+    "makeName": "Mercedes Benz",
+    "makeSlug": "mercedes-benz",
+    "countryOfOrigin": "Germany"
+  },
+  {
+    "makeId": "e1daf01d-3d76-598f-9671-500e8d869380",
+    "makeName": "MG",
+    "makeSlug": "mg",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "5cded7a3-ce43-5c33-aca6-2de62b80d3d0",
+    "makeName": "MINI",
+    "makeSlug": "mini",
+    "countryOfOrigin": "United Kingdom"
+  },
+  {
+    "makeId": "64294568-a3f6-528e-bf62-49a5717393ad",
+    "makeName": "Mitsubishi",
+    "makeSlug": "mitsubishi",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "44a81447-6901-5d5c-ac83-8b56c7c5b32a",
+    "makeName": "Nissan",
+    "makeSlug": "nissan",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "7390b02c-816a-5dcc-b3b9-554c6fb70754",
+    "makeName": "Omoda",
+    "makeSlug": "omoda",
+    "countryOfOrigin": "China"
+  },
+  {
+    "makeId": "f1fb07af-7ce9-586e-8fe9-13ec609f64b3",
+    "makeName": "Opel",
+    "makeSlug": "opel",
+    "countryOfOrigin": "Germany"
+  },
+  {
+    "makeId": "3821eb9b-2085-594e-abbe-ee2947d2ae79",
+    "makeName": "Peugeot",
+    "makeSlug": "peugeot",
+    "countryOfOrigin": "France"
+  },
+  {
+    "makeId": "acd7969c-1f10-5107-9781-28c8ba593109",
+    "makeName": "Porsche",
+    "makeSlug": "porsche",
+    "countryOfOrigin": "Germany"
+  },
+  {
+    "makeId": "eccc161a-10e6-519c-bb7d-3bde72d62314",
+    "makeName": "Proton",
+    "makeSlug": "proton",
+    "countryOfOrigin": "Malaysia"
+  },
+  {
+    "makeId": "ff95daa2-7105-5e2d-a94c-e3cd7b6bcbec",
+    "makeName": "Renault",
+    "makeSlug": "renault",
+    "countryOfOrigin": "France"
+  },
+  {
+    "makeId": "c95a288e-d772-5fec-8bab-0ba3d48945c5",
+    "makeName": "Rover",
+    "makeSlug": "rover",
+    "countryOfOrigin": "United Kingdom"
+  },
+  {
+    "makeId": "5e4ac8dd-b86f-5fed-839c-e0dae3240ba5",
+    "makeName": "Saab",
+    "makeSlug": "saab",
+    "countryOfOrigin": "Sweden"
+  },
+  {
+    "makeId": "02eb2b41-efbc-5d51-bdef-f0944416e3ac",
+    "makeName": "SEAT",
+    "makeSlug": "seat",
+    "countryOfOrigin": "Spain"
+  },
+  {
+    "makeId": "6e22759c-f98e-572d-8557-268d9d0e5c64",
+    "makeName": "smart",
+    "makeSlug": "smart",
+    "countryOfOrigin": "Germany"
+  },
+  {
+    "makeId": "e5347f3f-9508-59b6-b5fa-feafe55be0a6",
+    "makeName": "SsangYong",
+    "makeSlug": "ssangyong",
+    "countryOfOrigin": "South Korea"
+  },
+  {
+    "makeId": "06212c75-4141-5d00-a430-fb38421c47e5",
+    "makeName": "Subaru",
+    "makeSlug": "subaru",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "e19b2df9-aa2e-5976-a731-b663c7702ebf",
+    "makeName": "Suzuki",
+    "makeSlug": "suzuki",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "c5aa565d-7c36-5b52-ac49-2ee5f50a1abf",
+    "makeName": "Tata",
+    "makeSlug": "tata",
+    "countryOfOrigin": "India"
+  },
+  {
+    "makeId": "bdb9e04f-e625-5ede-9d63-3d828f8d99a5",
+    "makeName": "Toyota",
+    "makeSlug": "toyota",
+    "countryOfOrigin": "Japan"
+  },
+  {
+    "makeId": "54c89111-bfc4-52c0-a265-097c69b3e22a",
+    "makeName": "Volkswagen",
+    "makeSlug": "volkswagen",
+    "countryOfOrigin": "Germany"
+  },
+  {
+    "makeId": "463d0655-c0f6-5bd9-a224-96ffa7ee7d8c",
+    "makeName": "Volvo",
+    "makeSlug": "volvo",
+    "countryOfOrigin": "Sweden"
+  }
 ]
