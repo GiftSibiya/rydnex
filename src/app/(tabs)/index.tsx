@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,7 @@ import MetricCard from "@/components/elements/MetricCard";
 import SectionHeader from "@/components/elements/SectionHeader";
 import VehicleSelector from "@/components/elements/VehicleSelector";
 import Colors from "@/constants/colors";
+import { getCarLogo } from "@/constants/carLogos";
 import { useVehicle } from "@/contexts/VehicleContext";
 
 const C = Colors.dark;
@@ -85,14 +87,23 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.headerRow}>
-        <View>
+        {getCarLogo(activeVehicle.make) ? (
+          <View style={styles.logoWrap}>
+            <Image
+              source={getCarLogo(activeVehicle.make)}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+        ) : null}
+        <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Dashboard</Text>
-          <Text style={styles.vehicleName}>
+          <Text style={styles.vehicleName} numberOfLines={1}>
             {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
           </Text>
         </View>
-        <VehicleSelector />
       </View>
+      <VehicleSelector />
 
       {overdueRules.length > 0 && (
         <TouchableOpacity
@@ -276,8 +287,21 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
+    gap: 12,
+    marginBottom: 10,
+  },
+  logoWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 6,
+  },
+  logo: {
+    width: 32,
+    height: 32,
   },
   greeting: {
     fontSize: 12,

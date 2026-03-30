@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
+  Image,
   Keyboard,
   Modal,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CAR_LOGOS from "@/constants/carLogos";
 import Colors from "../../constants/colors";
 import vehicleMakesData from "../../../assets/json/vehicleMakes.json";
 import vehicleModelsData from "../../../assets/json/vehicleModels.json";
@@ -18,7 +20,8 @@ import vehicleYearsData from "../../../assets/json/vehicleYears.json";
 
 const C = Colors.dark;
 
-type Step = "make" | "model" | "year";
+// Step order: make → year → model
+type Step = "make" | "year" | "model";
 
 type Make = { id: string; name: string; country: string };
 type ModelsMap = Record<string, string[]>;
@@ -27,11 +30,11 @@ const MAKES: Make[] = vehicleMakesData as Make[];
 const MODELS: ModelsMap = vehicleModelsData as ModelsMap;
 const YEARS: number[] = vehicleYearsData as number[];
 
-const STEP_ORDER: Step[] = ["make", "model", "year"];
+const STEP_ORDER: Step[] = ["make", "year", "model"];
 const STEP_LABELS: Record<Step, string> = {
   make: "Make",
-  model: "Model",
   year: "Year",
+  model: "Model",
 };
 
 interface Props {
@@ -45,7 +48,7 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   const [step, setStep] = useState<Step>("make");
   const [selectedMakeId, setSelectedMakeId] = useState("");
   const [selectedMakeName, setSelectedMakeName] = useState("");
-  const [selectedModel, setSelectedModel] = useState("");
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const searchRef = useRef<TextInput>(null);
 
@@ -62,20 +65,20 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     );
   }, [search]);
 
+  const filteredYears = useMemo(() => {
+    return search ? YEARS.filter((y) => y.toString().startsWith(search)) : YEARS;
+  }, [search]);
+
   const filteredModels = useMemo(() => {
     const q = search.toLowerCase();
     return models.filter((m) => m.toLowerCase().includes(q));
   }, [search, models]);
 
-  const filteredYears = useMemo(() => {
-    return search ? YEARS.filter((y) => y.toString().startsWith(search)) : YEARS;
-  }, [search]);
-
   const resetAndClose = useCallback(() => {
     setStep("make");
     setSelectedMakeId("");
     setSelectedMakeName("");
-    setSelectedModel("");
+    setSelectedYear(null);
     setSearch("");
     onClose();
   }, [onClose]);
@@ -84,48 +87,68 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     setSelectedMakeId(make.id);
     setSelectedMakeName(make.name);
     setSearch("");
-    setStep("model");
-  }, []);
-
-  const handleModelSelect = useCallback((model: string) => {
-    setSelectedModel(model);
-    setSearch("");
     setStep("year");
   }, []);
 
-  const handleYearSelect = useCallback(
-    (year: number) => {
+  const handleYearSelect = useCallback((year: number) => {
+    setSelectedYear(year);
+    setSearch("");
+    setStep("model");
+  }, []);
+
+  const handleModelSelect = useCallback(
+    (model: string) => {
       Keyboard.dismiss();
-      onConfirm(selectedMakeName, selectedModel, year);
+      onConfirm(selectedMakeName, model, selectedYear!);
       resetAndClose();
     },
-    [selectedMakeName, selectedModel, onConfirm, resetAndClose]
+    [selectedMakeName, selectedYear, onConfirm, resetAndClose]
   );
 
   const handleBack = useCallback(() => {
     setSearch("");
-    if (step === "model") setStep("make");
-    else if (step === "year") setStep("model");
+    if (step === "year") setStep("make");
+    else if (step === "model") setStep("year");
   }, [step]);
 
   const renderMakeItem = useCallback(
-    ({ item }: { item: Make }) => (
+    ({ item }: { item: Make }) => {
+      const logo = CAR_LOGOS[item.id];
+      return (
+        <TouchableOpacity
+          style={styles.item}
+          onPress={() => handleMakeSelect(item)}
+          activeOpacity={0.65}
+        >
+          <View style={styles.makeLogoWrap}>
+            {logo ? (
+              <Image source={logo} style={styles.makeLogo} resizeMode="contain" />
+            ) : (
+              <Text style={styles.makeInitialText}>{item.name.charAt(0)}</Text>
+            )}
+          </View>
+          <View style={styles.itemTextBlock}>
+            <Text style={styles.itemPrimary}>{item.name}</Text>
+            <Text style={styles.itemSecondary}>{item.country}</Text>
+          </View>
+          <Feather name="chevron-right" size={16} color={C.textSubtle} />
+        </TouchableOpacity>
+      );
+    },
+    [handleMakeSelect]
+  );
+
+  const renderYearItem = useCallback(
+    ({ item }: { item: number }) => (
       <TouchableOpacity
         style={styles.item}
-        onPress={() => handleMakeSelect(item)}
+        onPress={() => handleYearSelect(item)}
         activeOpacity={0.65}
       >
-        <View style={styles.makeInitial}>
-          <Text style={styles.makeInitialText}>{item.name.charAt(0)}</Text>
-        </View>
-        <View style={styles.itemTextBlock}>
-          <Text style={styles.itemPrimary}>{item.name}</Text>
-          <Text style={styles.itemSecondary}>{item.country}</Text>
-        </View>
-        <Feather name="chevron-right" size={16} color={C.textSubtle} />
+        <Text style={styles.yearText}>{item}</Text>
       </TouchableOpacity>
     ),
-    [handleMakeSelect]
+    [handleYearSelect]
   );
 
   const renderModelItem = useCallback(
@@ -144,36 +167,28 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     [handleModelSelect]
   );
 
-  const renderYearItem = useCallback(
-    ({ item }: { item: number }) => (
-      <TouchableOpacity
-        style={styles.item}
-        onPress={() => handleYearSelect(item)}
-        activeOpacity={0.65}
-      >
-        <Text style={styles.yearText}>{item}</Text>
-      </TouchableOpacity>
-    ),
-    [handleYearSelect]
-  );
-
-  const listData = step === "make" ? filteredMakes : step === "model" ? filteredModels : filteredYears;
+  const listData =
+    step === "make" ? filteredMakes : step === "year" ? filteredYears : filteredModels;
   const renderItem =
     step === "make"
       ? renderMakeItem
-      : step === "model"
-      ? renderModelItem
-      : (renderYearItem as any);
+      : step === "year"
+      ? (renderYearItem as any)
+      : renderModelItem;
 
   const title =
     step === "make"
       ? "Select Make"
-      : step === "model"
-      ? `${selectedMakeName} — Select Model`
-      : `${selectedMakeName} ${selectedModel} — Select Year`;
+      : step === "year"
+      ? `${selectedMakeName} — Select Year`
+      : `${selectedMakeName} ${selectedYear} — Select Model`;
 
   const searchPlaceholder =
-    step === "make" ? "Search make or country..." : step === "model" ? "Search model..." : "Search year...";
+    step === "make"
+      ? "Search make or country..."
+      : step === "year"
+      ? "Search year..."
+      : "Search model...";
 
   return (
     <Modal
@@ -183,127 +198,135 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
       onRequestClose={stepIndex === 0 ? resetAndClose : handleBack}
     >
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 8 }]}>
-          {/* Drag Handle */}
-          <View style={styles.handle} />
+        {/* Drag handle */}
+        <View style={styles.handle} />
 
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={stepIndex === 0 ? resetAndClose : handleBack}
-              style={styles.headerButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Feather
-                name={stepIndex === 0 ? "x" : "arrow-left"}
-                size={20}
-                color={C.text}
-              />
-            </TouchableOpacity>
-            <Text style={styles.title} numberOfLines={1}>
-              {title}
-            </Text>
-            <View style={styles.headerButton} />
-          </View>
-
-          {/* Step Indicator */}
-          <View style={styles.stepRow}>
-            {STEP_ORDER.map((s, i) => (
-              <React.Fragment key={s}>
-                <View style={styles.stepItem}>
-                  <View
-                    style={[
-                      styles.stepDot,
-                      i < stepIndex && styles.stepDotDone,
-                      i === stepIndex && styles.stepDotActive,
-                    ]}
-                  >
-                    {i < stepIndex ? (
-                      <Feather name="check" size={10} color={C.background} />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.stepDotNum,
-                          i === stepIndex && styles.stepDotNumActive,
-                        ]}
-                      >
-                        {i + 1}
-                      </Text>
-                    )}
-                  </View>
-                  <Text
-                    style={[
-                      styles.stepLabel,
-                      i === stepIndex && styles.stepLabelActive,
-                    ]}
-                  >
-                    {STEP_LABELS[s]}
-                  </Text>
-                </View>
-                {i < STEP_ORDER.length - 1 && (
-                  <View
-                    style={[styles.stepLine, i < stepIndex && styles.stepLineDone]}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </View>
-
-          {/* Search */}
-          <View style={styles.searchWrap}>
-            <Feather name="search" size={15} color={C.textMuted} style={styles.searchIcon} />
-            <TextInput
-              ref={searchRef}
-              style={styles.searchInput}
-              value={search}
-              onChangeText={setSearch}
-              placeholder={searchPlaceholder}
-              placeholderTextColor={C.textMuted}
-              keyboardType={step === "year" ? "numeric" : "default"}
-              returnKeyType="search"
-              clearButtonMode="while-editing"
-              autoCorrect={false}
-              autoCapitalize="none"
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={stepIndex === 0 ? resetAndClose : handleBack}
+            style={styles.headerButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather
+              name={stepIndex === 0 ? "x" : "arrow-left"}
+              size={20}
+              color={C.text}
             />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
-                <Feather name="x-circle" size={15} color={C.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Breadcrumb path */}
-          {(selectedMakeName || selectedModel) ? (
-            <View style={styles.breadcrumb}>
-              {selectedMakeName ? (
-                <Text style={styles.breadcrumbText}>{selectedMakeName}</Text>
-              ) : null}
-              {selectedModel ? (
-                <>
-                  <Feather name="chevron-right" size={11} color={C.textSubtle} />
-                  <Text style={styles.breadcrumbText}>{selectedModel}</Text>
-                </>
-              ) : null}
-            </View>
-          ) : null}
-
-          {/* List */}
-          <FlatList
-            data={listData as any[]}
-            keyExtractor={(item) =>
-              typeof item === "object" ? (item as Make).id : String(item)
-            }
-            renderItem={renderItem}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <Feather name="search" size={28} color={C.textSubtle} />
-                <Text style={styles.emptyText}>No results for "{search}"</Text>
-              </View>
-            }
-          />
+          </TouchableOpacity>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+          <View style={styles.headerButton} />
         </View>
+
+        {/* Step indicator */}
+        <View style={styles.stepRow}>
+          {STEP_ORDER.map((s, i) => (
+            <React.Fragment key={s}>
+              <View style={styles.stepItem}>
+                <View
+                  style={[
+                    styles.stepDot,
+                    i < stepIndex && styles.stepDotDone,
+                    i === stepIndex && styles.stepDotActive,
+                  ]}
+                >
+                  {i < stepIndex ? (
+                    <Feather name="check" size={10} color={C.background} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.stepDotNum,
+                        i === stepIndex && styles.stepDotNumActive,
+                      ]}
+                    >
+                      {i + 1}
+                    </Text>
+                  )}
+                </View>
+                <Text
+                  style={[
+                    styles.stepLabel,
+                    i === stepIndex && styles.stepLabelActive,
+                  ]}
+                >
+                  {STEP_LABELS[s]}
+                </Text>
+              </View>
+              {i < STEP_ORDER.length - 1 && (
+                <View
+                  style={[
+                    styles.stepLine,
+                    i < stepIndex && styles.stepLineDone,
+                  ]}
+                />
+              )}
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Breadcrumb */}
+        {selectedMakeName ? (
+          <View style={styles.breadcrumb}>
+            {CAR_LOGOS[selectedMakeId] ? (
+              <Image
+                source={CAR_LOGOS[selectedMakeId]}
+                style={styles.breadcrumbLogo}
+                resizeMode="contain"
+              />
+            ) : null}
+            <Text style={styles.breadcrumbText}>{selectedMakeName}</Text>
+            {selectedYear ? (
+              <>
+                <Feather name="chevron-right" size={11} color={C.textSubtle} />
+                <Text style={styles.breadcrumbText}>{selectedYear}</Text>
+              </>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Search */}
+        <View style={styles.searchWrap}>
+          <Feather name="search" size={15} color={C.textMuted} style={styles.searchIcon} />
+          <TextInput
+            ref={searchRef}
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder={searchPlaceholder}
+            placeholderTextColor={C.textMuted}
+            keyboardType={step === "year" ? "numeric" : "default"}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
+              <Feather name="x-circle" size={15} color={C.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* List */}
+        <FlatList
+          data={listData as any[]}
+          keyExtractor={(item) =>
+            typeof item === "object" ? (item as Make).id : String(item)
+          }
+          renderItem={renderItem}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Feather name="search" size={28} color={C.textSubtle} />
+              <Text style={styles.emptyText}>No results for "{search}"</Text>
+            </View>
+          }
+        />
+      </View>
     </Modal>
   );
 }
@@ -350,7 +373,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingBottom: 14,
-    gap: 0,
   },
   stepItem: {
     alignItems: "center",
@@ -408,9 +430,13 @@ const styles = StyleSheet.create({
   breadcrumb: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 18,
     paddingBottom: 8,
+  },
+  breadcrumbLogo: {
+    width: 18,
+    height: 18,
   },
   breadcrumbText: {
     fontSize: 11,
@@ -461,16 +487,21 @@ const styles = StyleSheet.create({
     borderColor: C.surfaceBorder,
     gap: 12,
   },
-  makeInitial: {
-    width: 36,
-    height: 36,
+  makeLogoWrap: {
+    width: 40,
+    height: 40,
     borderRadius: 10,
-    backgroundColor: C.surfaceBorder,
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+    padding: 4,
+  },
+  makeLogo: {
+    width: 30,
+    height: 30,
   },
   makeInitialText: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: C.tint,
   },
