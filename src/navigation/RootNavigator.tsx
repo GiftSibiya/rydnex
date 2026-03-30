@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAppTheme } from '@/themes/AppTheme';
 import { AuthStore } from '@/stores/StoresIndex';
-import LoginScreen from '@/features/auth/screens/LoginScreen';
-import RegistrationScreen from '@/features/auth/screens/RegistrationScreen';
+
+// Auth Screens
+import SplashScreen from '@/pages/auth/SplashScreen';
+import LoginScreen from '@/pages/auth/LoginScreen';
+import RegistrationScreen from '@/pages/auth/RegistrationScreen';
+
+//
 import DashboardScreen from '@/features/home/screens/DashboardScreen';
 import VehiclesScreen from '@/features/vehicles/screens/VehiclesScreen';
 import MaintenanceScreen from '@/features/maintenance/screens/MaintenanceScreen';
@@ -65,11 +70,16 @@ const MainTabs = () => {
 const RootNavigator = () => {
   const { navigationTheme } = useAppTheme();
   const accessToken = AuthStore((state) => state.accessToken);
+  const [splashDone, setSplashDone] = useState(false);
 
   return (
     <NavigationContainer theme={navigationTheme}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {accessToken ? (
+        {!splashDone ? (
+          <RootStack.Screen name="Splash">
+            {() => <SplashScreen onDone={() => setSplashDone(true)} />}
+          </RootStack.Screen>
+        ) : accessToken ? (
           <RootStack.Screen name="MainTabs" component={MainTabs} />
         ) : (
           <RootStack.Screen name="AuthNavigator" component={AuthNavigator} />
