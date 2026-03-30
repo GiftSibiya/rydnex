@@ -1,5 +1,3 @@
-export { default } from "../../src/app/(tabs)/index";
-
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -17,13 +15,22 @@ import LuxCard from "@/components/elements/LuxCard";
 import MetricCard from "@/components/elements/MetricCard";
 import SectionHeader from "@/components/elements/SectionHeader";
 import VehicleSelector from "@/components/elements/VehicleSelector";
-import Colors from "../../src/constants/colors";
+import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
 
 const C = Colors.dark;
 
 export default function HomeScreen() {
-  const { activeVehicle, lastChecks, getEfficiencyMetrics, updateLastCheck, vehicles, serviceLogs, fuelLogs, partRules } = useVehicle();
+  const {
+    activeVehicle,
+    lastChecks,
+    getEfficiencyMetrics,
+    updateLastCheck,
+    vehicles,
+    serviceLogs,
+    fuelLogs,
+    partRules,
+  } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -37,7 +44,9 @@ export default function HomeScreen() {
           <Feather name="truck" size={40} color={C.tint} />
         </View>
         <Text style={styles.emptyTitle}>No Vehicles Yet</Text>
-        <Text style={styles.emptyText}>Add your first vehicle to start tracking your car's history and health.</Text>
+        <Text style={styles.emptyText}>
+          Add your first vehicle to start tracking your car's history and health.
+        </Text>
         <TouchableOpacity
           style={styles.emptyBtn}
           onPress={() => router.push("/garage")}
@@ -78,7 +87,9 @@ export default function HomeScreen() {
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.greeting}>Dashboard</Text>
-          <Text style={styles.vehicleName}>{activeVehicle.year} {activeVehicle.make} {activeVehicle.model}</Text>
+          <Text style={styles.vehicleName}>
+            {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
+          </Text>
         </View>
         <VehicleSelector />
       </View>
@@ -90,7 +101,9 @@ export default function HomeScreen() {
           activeOpacity={0.8}
         >
           <Feather name="alert-circle" size={16} color={C.danger} />
-          <Text style={styles.alertText}>{overdueRules.length} part{overdueRules.length > 1 ? "s" : ""} overdue for replacement</Text>
+          <Text style={styles.alertText}>
+            {overdueRules.length} part{overdueRules.length > 1 ? "s" : ""} overdue for replacement
+          </Text>
           <Feather name="chevron-right" size={14} color={C.danger} />
         </TouchableOpacity>
       )}
@@ -147,7 +160,10 @@ export default function HomeScreen() {
       </View>
 
       <LuxCard style={styles.section}>
-        <SectionHeader title="Last Checks" action={{ label: "All", onPress: () => router.push("/checks") }} />
+        <SectionHeader
+          title="Last Checks"
+          action={{ label: "All", onPress: () => router.push("/checks") }}
+        />
         {(["oil", "tyrePressure", "coolant", "spareWheel", "lights"] as const).slice(0, 3).map((field) => {
           const labels: Record<string, string> = {
             oil: "Engine Oil",
@@ -167,7 +183,10 @@ export default function HomeScreen() {
 
       {(lastService || lastFuel) && (
         <LuxCard style={styles.section}>
-          <SectionHeader title="Recent Activity" action={{ label: "View All", onPress: () => router.push("/logbook") }} />
+          <SectionHeader
+            title="Recent Activity"
+            action={{ label: "View All", onPress: () => router.push("/logbook") }}
+          />
           {lastService && (
             <View style={styles.recentItem}>
               <View style={styles.recentIcon}>
@@ -175,7 +194,9 @@ export default function HomeScreen() {
               </View>
               <View style={styles.recentInfo}>
                 <Text style={styles.recentTitle}>{lastService.description}</Text>
-                <Text style={styles.recentSub}>{new Date(lastService.date).toLocaleDateString("en-ZA")}</Text>
+                <Text style={styles.recentSub}>
+                  {new Date(lastService.date).toLocaleDateString("en-ZA")}
+                </Text>
               </View>
               <Text style={styles.recentCost}>R{lastService.cost.toLocaleString()}</Text>
             </View>
@@ -186,8 +207,12 @@ export default function HomeScreen() {
                 <Feather name="droplet" size={14} color={C.info} />
               </View>
               <View style={styles.recentInfo}>
-                <Text style={styles.recentTitle}>Fuel — {lastFuel.liters}L @ R{lastFuel.costPerLiter.toFixed(2)}/L</Text>
-                <Text style={styles.recentSub}>{new Date(lastFuel.date).toLocaleDateString("en-ZA")}</Text>
+                <Text style={styles.recentTitle}>
+                  Fuel — {lastFuel.liters}L @ R{lastFuel.costPerLiter.toFixed(2)}/L
+                </Text>
+                <Text style={styles.recentSub}>
+                  {new Date(lastFuel.date).toLocaleDateString("en-ZA")}
+                </Text>
               </View>
               <Text style={styles.recentCost}>R{lastFuel.totalCost.toFixed(0)}</Text>
             </View>
@@ -351,3 +376,4 @@ const styles = StyleSheet.create({
     color: C.text,
   },
 });
+

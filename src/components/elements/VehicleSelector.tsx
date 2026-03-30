@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import Colors from "../../constants/colors";
-import { useVehicle } from "contexts/VehicleContext";
+import { useVehicle } from "@/contexts/VehicleContext";
 
 const C = Colors.dark;
 

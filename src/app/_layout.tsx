@@ -1,5 +1,3 @@
-export { default } from "../src/app/_layout";
-
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -18,7 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { VehicleProvider } from "@/contexts/VehicleContext";
-import Colors from "../src/constants/colors";
+import Colors from "@/constants/colors";
 
 const C = Colors.dark;
 
@@ -83,3 +81,4 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+

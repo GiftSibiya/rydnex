@@ -1,5 +1,3 @@
-export { default } from "../src/app/login";
-
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -14,7 +12,7 @@ import {
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors, { GREEN, GREEN_DARK } from "../src/constants/colors";
+import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 
 const C = Colors.dark;
@@ -83,7 +81,10 @@ export default function LoginScreen() {
               placeholder="you@example.com"
               placeholderTextColor={C.textSubtle}
               value={email}
-              onChangeText={(t) => { setEmail(t); setError(""); }}
+              onChangeText={(t) => {
+                setEmail(t);
+                setError("");
+              }}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
@@ -100,12 +101,22 @@ export default function LoginScreen() {
               placeholder="••••••••"
               placeholderTextColor={C.textSubtle}
               value={password}
-              onChangeText={(t) => { setPassword(t); setError(""); }}
+              onChangeText={(t) => {
+                setPassword(t);
+                setError("");
+              }}
               secureTextEntry={!showPass}
               autoCapitalize="none"
             />
-            <TouchableOpacity onPress={() => setShowPass(!showPass)} activeOpacity={0.7}>
-              <Feather name={showPass ? "eye-off" : "eye"} size={16} color={C.textSubtle} />
+            <TouchableOpacity
+              onPress={() => setShowPass(!showPass)}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name={showPass ? "eye-off" : "eye"}
+                size={16}
+                color={C.textSubtle}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -165,7 +176,9 @@ export default function LoginScreen() {
 
       <View style={styles.securityNote}>
         <Feather name="shield" size={13} color={C.textSubtle} />
-        <Text style={styles.securityText}>Your data stays on your device. No cloud sync yet.</Text>
+        <Text style={styles.securityText}>
+          Your data stays on your device. No cloud sync yet.
+        </Text>
       </View>
     </KeyboardAwareScrollView>
   );
@@ -332,3 +345,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
