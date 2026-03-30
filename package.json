@@ -59,5 +59,8 @@
     "zustand": "^5.0.3",
     "zod": "^3.23.8",
     "zod-validation-error": "^3.4.0"
+  },
+  "dependencies": {
+    "expo-updates": "~29.0.16"
   }
 }

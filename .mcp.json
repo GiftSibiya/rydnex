@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+      "skaftin": {
+        "type": "http",
+        "url": "https://skaftinplatform.bobosoftware.co.za/app-api/mcp/protocol",
+        "headers": {
+          "Authorization": "Bearer mcp_c7d306c94aa91113a09c576d325d8e42c37828631e9faebbb51cb5a485416149"
+        }
+      }
+    }
+  }

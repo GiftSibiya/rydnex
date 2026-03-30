@@ -14059,46 +14059,7 @@
     "isElectric": false,
     "powertrainType": "ice"
   },
-  {
-    "modelId": "55831d18-c48e-59d5-a051-a89c68c9b40a",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3",
-    "modelSlug": "c3",
-    "modelYear": 2025,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "df9b343f-beeb-5ab3-9adc-738da7f9c9ce",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3",
-    "modelSlug": "c3",
-    "modelYear": 2024,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "40bf8974-bb0d-5330-8c54-3346503c21b2",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3",
-    "modelSlug": "c3",
-    "modelYear": 2023,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "8d5e7608-f47e-5c91-a760-784d2f361ac4",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3",
-    "modelSlug": "c3",
-    "modelYear": 2022,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
+  
   {
     "modelId": "016788a1-98a6-5401-93ea-dfb8e93de8d3",
     "makeId": "b215b315-69a1-525b-b901-b923fa138c9b",
@@ -14269,56 +14230,7 @@
     "isElectric": false,
     "powertrainType": "ice"
   },
-  {
-    "modelId": "1a69b2ff-9448-5fcf-ba09-b62e84c877d4",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3 Aircross",
-    "modelSlug": "c3-aircross",
-    "modelYear": 2025,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "2c7b4952-c92e-5ab3-8b79-9b8820d69395",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3 Aircross",
-    "modelSlug": "c3-aircross",
-    "modelYear": 2024,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "b7549480-008b-59a9-b6ea-70e5b5e105ba",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3 Aircross",
-    "modelSlug": "c3-aircross",
-    "modelYear": 2023,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "2417905b-a8b8-528f-a89c-1d5d6387ceb3",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3 Aircross",
-    "modelSlug": "c3-aircross",
-    "modelYear": 2022,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "af2c8032-38d4-5711-91bc-4e90ae9f72df",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C3 Aircross",
-    "modelSlug": "c3-aircross",
-    "modelYear": 2021,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
+ 
   {
     "modelId": "2400f54a-31e0-5378-a5f4-892b98e59b9f",
     "makeId": "b215b315-69a1-525b-b901-b923fa138c9b",
@@ -14779,76 +14691,7 @@
     "isElectric": false,
     "powertrainType": "ice"
   },
-  {
-    "modelId": "fccfc05a-fc9d-528e-8c18-faf96e120719",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C5 Aircross",
-    "modelSlug": "c5-aircross",
-    "modelYear": 2025,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "4ede47d5-2fbc-5806-8eb9-a68a599a036c",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C5 Aircross",
-    "modelSlug": "c5-aircross",
-    "modelYear": 2024,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "36418f1b-398b-50b5-851d-e9ea313269ab",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C5 Aircross",
-    "modelSlug": "c5-aircross",
-    "modelYear": 2023,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "27ad4c08-f0fd-5818-a5c2-81f96586281b",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C5 Aircross",
-    "modelSlug": "c5-aircross",
-    "modelYear": 2022,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "2fcd9124-123d-5185-b4e5-c38616acff34",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C5 Aircross",
-    "modelSlug": "c5-aircross",
-    "modelYear": 2021,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "f6d7f943-8582-50e0-870f-69bbd6456836",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C5 Aircross",
-    "modelSlug": "c5-aircross",
-    "modelYear": 2020,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
-  {
-    "modelId": "aa91f1eb-ec9c-542a-80ef-336c4afd77c6",
-    "makeId": "9dcf235b-2db4-513d-b52d-d440077bd538",
-    "modelName": "C5 Aircross",
-    "modelSlug": "c5-aircross",
-    "modelYear": 2019,
-    "isHybrid": false,
-    "isElectric": false,
-    "powertrainType": "ice"
-  },
+
   {
     "modelId": "44564997-1a2d-5090-9f42-36427b3f1c81",
     "makeId": "1c1f9d7b-b3bb-5c9e-b986-32e7f330e4d0",
