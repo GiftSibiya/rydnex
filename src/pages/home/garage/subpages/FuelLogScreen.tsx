@@ -1,9 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   KeyboardAvoidingView,
-  PanResponder,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -22,57 +23,6 @@ const C = Colors.dark;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const parseNumericText = (value: string) => Number(value.replace(/,/g, "."));
 
-type LevelSliderProps = {
-  value: number;
-  onValueChange: (value: number) => void;
-  minimumValue?: number;
-  maximumValue?: number;
-};
-
-function LevelSlider({
-  value,
-  onValueChange,
-  minimumValue = 0,
-  maximumValue = 100,
-}: LevelSliderProps) {
-  const [trackWidth, setTrackWidth] = useState(1);
-  const range = maximumValue - minimumValue;
-  const normalized = range <= 0 ? 0 : clamp((value - minimumValue) / range, 0, 1);
-
-  const updateFromX = (positionX: number) => {
-    const ratio = clamp(positionX / trackWidth, 0, 1);
-    const next = minimumValue + ratio * range;
-    onValueChange(next);
-  };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (evt) => updateFromX(evt.nativeEvent.locationX),
-        onPanResponderMove: (evt) => updateFromX(evt.nativeEvent.locationX),
-      }),
-    [trackWidth, range, minimumValue, onValueChange],
-  );
-
-  const trackFillWidth = normalized * trackWidth;
-  const thumbLeft = clamp(normalized * trackWidth - 10, 0, Math.max(trackWidth - 20, 0));
-
-  return (
-    <View style={styles.sliderWrap}>
-      <Pressable
-        style={styles.sliderTrack}
-        onLayout={(evt) => setTrackWidth(Math.max(evt.nativeEvent.layout.width, 1))}
-        onPress={(evt) => updateFromX(evt.nativeEvent.locationX)}
-        {...panResponder.panHandlers}
-      >
-        <View style={[styles.sliderTrackFill, { width: trackFillWidth }]} />
-        <View style={[styles.sliderThumb, { left: thumbLeft }]} />
-      </Pressable>
-    </View>
-  );
-}
 
 export default function FuelLogScreen() {
   const { activeVehicle, addFuelLog } = useVehicle();
@@ -89,6 +39,16 @@ export default function FuelLogScreen() {
   const [totalRangeInput, setTotalRangeInput] = useState("650");
   const [rangeLeftInput, setRangeLeftInput] = useState("390");
   const [fuelPercent, setFuelPercent] = useState(60);
+  const [fuelModalVisible, setFuelModalVisible] = useState(false);
+  const animatedFillWidth = useRef(new Animated.Value(fuelPercent)).current;
+
+  useEffect(() => {
+    Animated.timing(animatedFillWidth, {
+      toValue: fuelPercent,
+      duration: 500,
+      useNativeDriver: false,
+    }).start();
+  }, [animatedFillWidth, fuelPercent]);
 
   const totalCost = (Number(form.liters) || 0) * (Number(form.costPerLiter) || 0);
   const totalRangeNumber = useMemo(
@@ -184,46 +144,48 @@ export default function FuelLogScreen() {
           <View style={styles.fuelLevelSection}>
             <Text style={styles.sectionTitle}>Fuel Level</Text>
             <Text style={styles.sectionSub}>
-              Adjust with slider or update range values to animate the tank and counters.
+              Tap below to log your current fuel level.
             </Text>
 
-            <View style={styles.fuelLevelRow}>
-              <FuelLevelGauge
-                percentage={fuelPercent}
-                totalRange={totalRangeNumber}
-                rangeLeft={rangeLeftNumber}
-              />
-
-              <View style={styles.fuelControls}>
-                <LuxInput
-                  label="Total Range (km)"
-                  placeholder="e.g. 650"
-                  value={totalRangeInput}
-                  onChangeText={setTotalRangeInput}
-                  keyboardType="numeric"
+            <View style={styles.hGaugeRow}>
+              <Text style={styles.hGaugeEndLabel}>E</Text>
+              <View style={styles.hGaugeTrack}>
+                <Animated.View
+                  style={[
+                    styles.hGaugeFill,
+                    {
+                      width: animatedFillWidth.interpolate({
+                        inputRange: [0, 100],
+                        outputRange: ["0%", "100%"],
+                        extrapolate: "clamp",
+                      }),
+                      backgroundColor:
+                        fuelPercent > 50 ? C.tint : fuelPercent > 20 ? "#F5A623" : "#E74C3C",
+                    },
+                  ]}
                 />
-                <LuxInput
-                  label="Range Left (km)"
-                  placeholder="e.g. 390"
-                  value={rangeLeftInput}
-                  onChangeText={setRangeLeftInput}
-                  keyboardType="numeric"
-                />
+                <View style={styles.hGaugeTick25} />
+                <View style={styles.hGaugeTick50} />
+                <View style={styles.hGaugeTick75} />
+              </View>
+              <Text style={styles.hGaugeEndLabel}>F</Text>
+            </View>
 
-                <View style={styles.sliderBlock}>
-                  <View style={styles.sliderHeader}>
-                    <Text style={styles.sliderLabel}>Tank Level</Text>
-                    <Text style={styles.sliderValue}>{Math.round(fuelPercent)}%</Text>
-                  </View>
-                  <LevelSlider
-                    minimumValue={0}
-                    maximumValue={100}
-                    value={fuelPercent}
-                    onValueChange={handleFuelPercentChange}
-                  />
-                </View>
+            <View style={styles.fuelSummaryPair}>
+              <View style={[styles.fuelSummaryRow, { flex: 1 }]}>
+                <Text style={styles.fuelSummaryLabel}>Current Level</Text>
+                <Text style={styles.fuelSummaryValue}>{Math.round(fuelPercent)}%</Text>
+              </View>
+              <View style={[styles.fuelSummaryRow, { flex: 1 }]}>
+                <Text style={styles.fuelSummaryLabel}>Range Left</Text>
+                <Text style={styles.fuelSummaryValue}>{Math.round(rangeLeftNumber)} km</Text>
               </View>
             </View>
+            <GoldButton
+              label="Log Fuel Usage"
+              variant="secondary"
+              onPress={() => setFuelModalVisible(true)}
+            />
           </View>
 
           <LuxInput
@@ -273,6 +235,84 @@ export default function FuelLogScreen() {
 
         <GoldButton label="Save Fuel Log" onPress={handleSave} loading={loading} />
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={fuelModalVisible}
+        onRequestClose={() => setFuelModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable style={styles.backdropTouch} onPress={() => setFuelModalVisible(false)} />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Fuel Usage</Text>
+            </View>
+            <Text style={styles.modalSub}>
+              Drag the tank marker or edit range values. Everything stays synchronized.
+            </Text>
+
+            <View style={styles.fuelLevelRow}>
+              <FuelLevelGauge
+                percentage={fuelPercent}
+                totalRange={totalRangeNumber}
+                rangeLeft={rangeLeftNumber}
+                onPercentageChange={handleFuelPercentChange}
+                showMetrics={false}
+              />
+
+              <View style={styles.modalRightColumn}>
+                <View style={styles.metricPair}>
+                  <View style={[styles.metricCard, { flex: 1 }]}>
+                    <Text style={styles.metricLabel}>Fuel Level</Text>
+                    <Text style={styles.metricValue}>{Math.round(fuelPercent)}%</Text>
+                  </View>
+                  <View style={[styles.metricCard, { flex: 1 }]}>
+                    <Text style={styles.metricLabel}>Range Left</Text>
+                    <Text style={styles.metricValue}>{Math.round(rangeLeftNumber)} km</Text>
+                  </View>
+                </View>
+                <View style={styles.metricCard}>
+                  <Text style={styles.metricLabel}>Range Used</Text>
+                  <Text style={styles.metricValue}>
+                    {Math.max(0, Math.round(totalRangeNumber - rangeLeftNumber))} km
+                  </Text>
+                </View>
+                <LuxInput
+                  label="Total Range (km)"
+                  placeholder="e.g. 650"
+                  value={totalRangeInput}
+                  onChangeText={setTotalRangeInput}
+                  keyboardType="numeric"
+                />
+                <LuxInput
+                  label="Range Left (km)"
+                  placeholder="e.g. 390"
+                  value={rangeLeftInput}
+                  onChangeText={setRangeLeftInput}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+            <View style={styles.modalButtonRow}>
+              <GoldButton
+                label="Cancel"
+                variant="secondary"
+                onPress={() => setFuelModalVisible(false)}
+                style={{ flex: 1 }}
+              />
+              <GoldButton
+                label="Save"
+                onPress={() => setFuelModalVisible(false)}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -316,6 +356,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.text },
   sectionSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted },
+  fuelSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: C.surfaceElevated,
+    borderColor: C.surfaceBorder,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  fuelSummaryLabel: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textMuted },
+  fuelSummaryValue: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.tint },
   fuelLevelRow: {
     flexDirection: "row",
     gap: 12,
@@ -325,43 +378,65 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 10,
   },
-  sliderBlock: {
+  modalRightColumn: {
+    flex: 1,
+    gap: 8,
+  },
+  metricCard: {
     borderWidth: 1,
     borderColor: C.surfaceBorder,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 4,
-    backgroundColor: C.surfaceElevated,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "rgba(46,204,113,0.05)",
   },
-  sliderHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  sliderLabel: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textMuted },
-  sliderValue: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.tint },
-  sliderWrap: {
-    paddingVertical: 8,
+  metricLabel: {
+    color: C.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
-  sliderTrack: {
-    height: 12,
-    borderRadius: 999,
-    backgroundColor: C.surfaceBorder,
+  metricValue: {
+    color: C.text,
+    fontFamily: "Inter_700Bold",
+    fontSize: 18,
+    marginTop: 3,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    alignItems: "center",
     justifyContent: "center",
+    padding: 16,
   },
-  sliderTrackFill: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 999,
-    backgroundColor: C.tint,
+  backdropTouch: {
+    ...StyleSheet.absoluteFillObject,
   },
-  sliderThumb: {
-    position: "absolute",
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: C.tintLight,
-    borderWidth: 2,
-    borderColor: C.tintDark,
+  modalCard: {
+    width: "100%",
+    maxWidth: 520,
+    backgroundColor: C.card,
+    borderColor: C.cardBorder,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+  },
+  modalSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: C.textMuted,
   },
   form: { gap: 14 },
   switchRow: {
@@ -377,4 +452,60 @@ const styles = StyleSheet.create({
   },
   switchLabel: { fontSize: 14, fontFamily: "Inter_500Medium", color: C.text },
   switchSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
+  hGaugeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  hGaugeEndLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: C.textMuted,
+    width: 14,
+    textAlign: "center",
+  },
+  hGaugeTrack: {
+    flex: 1,
+    height: 14,
+    borderRadius: 999,
+    backgroundColor: C.surfaceElevated,
+    borderWidth: 1,
+    borderColor: C.surfaceBorder,
+    overflow: "hidden",
+    position: "relative",
+  },
+  hGaugeFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 999,
+  },
+  hGaugeTick25: {
+    position: "absolute",
+    left: "25%",
+    top: 2,
+    bottom: 2,
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  hGaugeTick50: {
+    position: "absolute",
+    left: "50%",
+    top: 2,
+    bottom: 2,
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  hGaugeTick75: {
+    position: "absolute",
+    left: "75%",
+    top: 2,
+    bottom: 2,
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  fuelSummaryPair: { flexDirection: "row", gap: 8 },
+  metricPair: { flexDirection: "row", gap: 8 },
+  modalButtonRow: { flexDirection: "row", gap: 10 },
 });

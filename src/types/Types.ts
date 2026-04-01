@@ -44,6 +44,7 @@ export type Vehicle = {
   make: string;
   model: string;
   year?: number;
+  trim?: string;
   engine?: string;
   notes?: string;
   is_active?: boolean;

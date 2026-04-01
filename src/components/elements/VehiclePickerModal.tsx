@@ -16,29 +16,32 @@ import CAR_LOGOS from "@/constants/carLogos";
 import Colors from "../../constants/colors";
 import vehicleMakesData from "../../../assets/json/vehicleMakes.json";
 import vehicleModelsData from "../../../assets/json/vehicleModels.json";
+import vehicleTrimsData from "../../../assets/json/vehicleTrims.json";
 
 const C = Colors.dark;
 
-// Step order: make → year → model
-type Step = "make" | "year" | "model";
+type Step = "make" | "year" | "model" | "trim";
 
 type Make = { makeId: string; makeName: string; makeSlug: string; countryOfOrigin?: string };
 type Model = { modelId: string; makeId: string; modelName: string; modelSlug: string; modelYear: number };
+type Trim = { trimId: string; modelId: string; trimName: string; trimSlug: string };
 
 const MAKES: Make[] = vehicleMakesData as Make[];
 const MODELS: Model[] = vehicleModelsData as Model[];
+const TRIMS: Trim[] = vehicleTrimsData as Trim[];
 
-const STEP_ORDER: Step[] = ["make", "year", "model"];
+const STEP_ORDER: Step[] = ["make", "year", "model", "trim"];
 const STEP_LABELS: Record<Step, string> = {
   make: "Make",
   year: "Year",
   model: "Model",
+  trim: "Trim",
 };
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (make: string, model: string, year: number) => void;
+  onConfirm: (make: string, model: string, year: number, trim: string) => void;
 }
 
 export default function VehiclePickerModal({ visible, onClose, onConfirm }: Props) {
@@ -48,6 +51,8 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   const [selectedMakeSlug, setSelectedMakeSlug] = useState("");
   const [selectedMakeName, setSelectedMakeName] = useState("");
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState("");
+  const [selectedModelName, setSelectedModelName] = useState("");
   const [search, setSearch] = useState("");
   const searchRef = useRef<TextInput>(null);
 
@@ -64,16 +69,29 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     return byMake;
   }, []);
 
-  const modelNamesByMakeIdAndYear = useMemo(() => {
-    const byKey = new Map<string, Set<string>>();
+  const modelsByMakeIdAndYear = useMemo(() => {
+    const byKey = new Map<string, Model[]>();
 
     for (const model of MODELS) {
       const key = `${model.makeId}|${model.modelYear}`;
-      if (!byKey.has(key)) byKey.set(key, new Set<string>());
-      byKey.get(key)?.add(model.modelName);
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key)?.push(model);
     }
 
     return byKey;
+  }, []);
+
+  const trimNamesByModelId = useMemo(() => {
+    const byModel = new Map<string, Set<string>>();
+
+    for (const trim of TRIMS) {
+      const normalizedName = trim.trimName.trim();
+      const safeTrimName = normalizedName && normalizedName !== "-" ? normalizedName : "Base";
+      if (!byModel.has(trim.modelId)) byModel.set(trim.modelId, new Set<string>());
+      byModel.get(trim.modelId)?.add(safeTrimName);
+    }
+
+    return byModel;
   }, []);
 
   const filteredMakes = useMemo(() => {
@@ -100,12 +118,22 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   const filteredModels = useMemo(() => {
     if (!selectedMakeId || !selectedYear) return [];
     const key = `${selectedMakeId}|${selectedYear}`;
-    const models = Array.from(modelNamesByMakeIdAndYear.get(key) ?? []).sort((a, b) =>
-      a.localeCompare(b)
+    const models = [...(modelsByMakeIdAndYear.get(key) ?? [])].sort((a, b) =>
+      a.modelName.localeCompare(b.modelName)
     );
     const q = search.toLowerCase();
-    return models.filter((m) => m.toLowerCase().includes(q));
-  }, [search, selectedMakeId, selectedYear, modelNamesByMakeIdAndYear]);
+    return models.filter((m) => m.modelName.toLowerCase().includes(q));
+  }, [search, selectedMakeId, selectedYear, modelsByMakeIdAndYear]);
+
+  const filteredTrims = useMemo(() => {
+    if (!selectedModelId) return [];
+    const trims = Array.from(trimNamesByModelId.get(selectedModelId) ?? []).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    const source = trims.length > 0 ? trims : ["Base"];
+    const q = search.toLowerCase();
+    return source.filter((t) => t.toLowerCase().includes(q));
+  }, [search, selectedModelId, trimNamesByModelId]);
 
   const resetAndClose = useCallback(() => {
     setStep("make");
@@ -113,6 +141,8 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     setSelectedMakeSlug("");
     setSelectedMakeName("");
     setSelectedYear(null);
+    setSelectedModelId("");
+    setSelectedModelName("");
     setSearch("");
     onClose();
   }, [onClose]);
@@ -122,29 +152,41 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     setSelectedMakeSlug(make.makeSlug);
     setSelectedMakeName(make.makeName);
     setSelectedYear(null);
+    setSelectedModelId("");
+    setSelectedModelName("");
     setSearch("");
     setStep("year");
   }, []);
 
   const handleYearSelect = useCallback((year: number) => {
     setSelectedYear(year);
+    setSelectedModelId("");
+    setSelectedModelName("");
     setSearch("");
     setStep("model");
   }, []);
 
-  const handleModelSelect = useCallback(
-    (model: string) => {
+  const handleModelSelect = useCallback((model: Model) => {
+    setSelectedModelId(model.modelId);
+    setSelectedModelName(model.modelName);
+    setSearch("");
+    setStep("trim");
+  }, []);
+
+  const handleTrimSelect = useCallback(
+    (trim: string) => {
       Keyboard.dismiss();
-      onConfirm(selectedMakeName, model, selectedYear!);
+      onConfirm(selectedMakeName, selectedModelName, selectedYear!, trim);
       resetAndClose();
     },
-    [selectedMakeName, selectedYear, onConfirm, resetAndClose]
+    [selectedMakeName, selectedModelName, selectedYear, onConfirm, resetAndClose]
   );
 
   const handleBack = useCallback(() => {
     setSearch("");
     if (step === "year") setStep("make");
     else if (step === "model") setStep("year");
+    else if (step === "trim") setStep("model");
   }, [step]);
 
   const renderMakeItem = useCallback(
@@ -188,14 +230,14 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   );
 
   const renderModelItem = useCallback(
-    ({ item }: { item: string }) => (
+    ({ item }: { item: Model }) => (
       <TouchableOpacity
         style={styles.item}
         onPress={() => handleModelSelect(item)}
         activeOpacity={0.65}
       >
         <View style={styles.itemTextBlock}>
-          <Text style={styles.itemPrimary}>{item}</Text>
+          <Text style={styles.itemPrimary}>{item.modelName}</Text>
         </View>
         <Feather name="chevron-right" size={16} color={C.textSubtle} />
       </TouchableOpacity>
@@ -203,28 +245,56 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     [handleModelSelect]
   );
 
+  const renderTrimItem = useCallback(
+    ({ item }: { item: string }) => (
+      <TouchableOpacity
+        style={styles.item}
+        onPress={() => handleTrimSelect(item)}
+        activeOpacity={0.65}
+      >
+        <View style={styles.itemTextBlock}>
+          <Text style={styles.itemPrimary}>{item}</Text>
+        </View>
+        <Feather name="check" size={16} color={C.tint} />
+      </TouchableOpacity>
+    ),
+    [handleTrimSelect]
+  );
+
   const listData =
-    step === "make" ? filteredMakes : step === "year" ? filteredYears : filteredModels;
+    step === "make"
+      ? filteredMakes
+      : step === "year"
+      ? filteredYears
+      : step === "model"
+      ? filteredModels
+      : filteredTrims;
   const renderItem =
     step === "make"
       ? renderMakeItem
       : step === "year"
       ? (renderYearItem as any)
-      : renderModelItem;
+      : step === "model"
+      ? (renderModelItem as any)
+      : (renderTrimItem as any);
 
   const title =
     step === "make"
       ? "Select Make"
       : step === "year"
       ? `${selectedMakeName} — Select Year`
-      : `${selectedMakeName} ${selectedYear} — Select Model`;
+      : step === "model"
+      ? `${selectedMakeName} ${selectedYear} — Select Model`
+      : `${selectedMakeName} ${selectedYear} ${selectedModelName} — Select Trim`;
 
   const searchPlaceholder =
     step === "make"
       ? "Search make or country..."
       : step === "year"
       ? "Search year..."
-      : "Search model...";
+      : step === "model"
+      ? "Search model..."
+      : "Search trim...";
 
   return (
     <Modal
@@ -234,10 +304,8 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
       onRequestClose={stepIndex === 0 ? resetAndClose : handleBack}
     >
       <View style={[styles.sheet, { paddingBottom: insets.bottom + 8 }]}>
-        {/* Drag handle */}
         <View style={styles.handle} />
 
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={stepIndex === 0 ? resetAndClose : handleBack}
@@ -256,7 +324,6 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
           <View style={styles.headerButton} />
         </View>
 
-        {/* Step indicator */}
         <View style={styles.stepRow}>
           {STEP_ORDER.map((s, i) => (
             <React.Fragment key={s}>
@@ -302,7 +369,6 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
           ))}
         </View>
 
-        {/* Breadcrumb */}
         {selectedMakeName ? (
           <View style={styles.breadcrumb}>
             {CAR_LOGOS[selectedMakeSlug] ? (
@@ -319,10 +385,15 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
                 <Text style={styles.breadcrumbText}>{selectedYear}</Text>
               </>
             ) : null}
+            {selectedModelName ? (
+              <>
+                <Feather name="chevron-right" size={11} color={C.textSubtle} />
+                <Text style={styles.breadcrumbText}>{selectedModelName}</Text>
+              </>
+            ) : null}
           </View>
         ) : null}
 
-        {/* Search */}
         <View style={styles.searchWrap}>
           <Feather name="search" size={15} color={C.textMuted} style={styles.searchIcon} />
           <TextInput
@@ -345,11 +416,14 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
           )}
         </View>
 
-        {/* List */}
         <FlatList
           data={listData as any[]}
           keyExtractor={(item) =>
-            typeof item === "object" ? (item as Make).makeId : String(item)
+            step === "make"
+              ? (item as Make).makeId
+              : step === "model"
+              ? (item as Model).modelId
+              : String(item)
           }
           renderItem={renderItem}
           keyboardShouldPersistTaps="handled"

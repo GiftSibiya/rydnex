@@ -43,6 +43,7 @@ export default function GarageScreen() {
     make: "",
     model: "",
     year: String(currentYear),
+    trim: "",
     vin: "",
     registration: "",
     color: "",
@@ -59,6 +60,7 @@ export default function GarageScreen() {
     if (!form.make.trim()) e.make = "Required";
     if (!form.model.trim()) e.model = "Required";
     if (!form.year || isNaN(Number(form.year))) e.year = "Enter a valid year";
+    if (!form.trim.trim()) e.trim = "Required";
     if (!form.registration.trim()) e.registration = "Required";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -71,6 +73,7 @@ export default function GarageScreen() {
       make: form.make.trim(),
       model: form.model.trim(),
       year: form.year.trim(),
+      trim: form.trim.trim(),
       vin: form.vin.trim(),
       registration: form.registration.trim().toUpperCase(),
       color: form.color.trim(),
@@ -86,6 +89,7 @@ export default function GarageScreen() {
       make: "",
       model: "",
       year: String(currentYear),
+      trim: "",
       vin: "",
       registration: "",
       color: "",
@@ -162,7 +166,9 @@ export default function GarageScreen() {
                     <Text style={styles.vehicleName}>
                       {v.year} {v.make}
                     </Text>
-                    <Text style={styles.vehicleModel}>{v.model}</Text>
+                    <Text style={styles.vehicleModel}>
+                      {v.model}{v.trim ? ` ${v.trim}` : ""}
+                    </Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => handleDelete(v)}
@@ -243,8 +249,8 @@ export default function GarageScreen() {
         <VehiclePickerModal
           visible={pickerVisible}
           onClose={() => setPickerVisible(false)}
-          onConfirm={(make, model, year) =>
-            setForm((f) => ({ ...f, make, model, year: String(year) }))
+          onConfirm={(make, model, year, trim) =>
+            setForm((f) => ({ ...f, make, model, year: String(year), trim }))
           }
         />
         <ScrollView
@@ -265,8 +271,9 @@ export default function GarageScreen() {
               <TouchableOpacity
                 style={[
                   styles.pickerField,
-                  (errors.make || errors.model || errors.year) && styles.pickerFieldError,
-                  !!(form.make && form.model && form.year) && styles.pickerFieldFilled,
+                  (errors.make || errors.model || errors.year || errors.trim) &&
+                    styles.pickerFieldError,
+                  !!(form.make && form.model && form.year && form.trim) && styles.pickerFieldFilled,
                 ]}
                 onPress={() => setPickerVisible(true)}
                 activeOpacity={0.75}
@@ -274,18 +281,26 @@ export default function GarageScreen() {
                 <Text
                   style={[
                     styles.pickerFieldText,
-                    !(form.make && form.model && form.year) && styles.pickerFieldPlaceholder,
+                    !(form.make && form.model && form.year && form.trim) && styles.pickerFieldPlaceholder,
                   ]}
                   numberOfLines={1}
                 >
-                  {form.make && form.model && form.year
-                    ? `${form.year} ${form.make} ${form.model}`
-                    : "Select make, model & year"}
+                  {form.make && form.model && form.year && form.trim
+                    ? `${form.year} ${form.make} ${form.model} ${form.trim}`
+                    : "Select make, model, year & trim"}
                 </Text>
                 <View style={styles.pickerFieldRight}>
                   {form.make ? (
                     <TouchableOpacity
-                      onPress={() => setForm((f) => ({ ...f, make: "", model: "", year: String(currentYear) }))}
+                      onPress={() =>
+                        setForm((f) => ({
+                          ...f,
+                          make: "",
+                          model: "",
+                          year: String(currentYear),
+                          trim: "",
+                        }))
+                      }
                       hitSlop={8}
                     >
                       <Feather name="x" size={14} color={C.textMuted} />
@@ -294,9 +309,9 @@ export default function GarageScreen() {
                   <Feather name="chevron-right" size={16} color={form.make ? C.tint : C.textSubtle} />
                 </View>
               </TouchableOpacity>
-              {(errors.make || errors.model || errors.year) && (
+              {(errors.make || errors.model || errors.year || errors.trim) && (
                 <Text style={styles.pickerFieldErrorText}>
-                  {errors.make || errors.model || errors.year}
+                  {errors.make || errors.model || errors.year || errors.trim}
                 </Text>
               )}
             </View>

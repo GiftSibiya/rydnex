@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { PanResponder, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   runOnJS,
@@ -20,6 +20,9 @@ type FuelLevelGaugeProps = {
   totalRange: number;
   rangeLeft: number;
   tankHeight?: number;
+  onPercentageChange?: (value: number) => void;
+  metricsPosition?: "bottom" | "right";
+  showMetrics?: boolean;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -55,6 +58,9 @@ export default function FuelLevelGauge({
   totalRange,
   rangeLeft,
   tankHeight = 220,
+  onPercentageChange,
+  metricsPosition = "bottom",
+  showMetrics = true,
 }: FuelLevelGaugeProps) {
   const safePercent = useMemo(() => clamp(percentage, 0, 100), [percentage]);
   const safeTotal = useMemo(() => Math.max(0, totalRange), [totalRange]);
@@ -62,8 +68,10 @@ export default function FuelLevelGauge({
   const safeUsed = useMemo(() => Math.max(0, safeTotal - safeLeft), [safeLeft, safeTotal]);
 
   const fillPercent = useSharedValue(safePercent);
+  const isDragging = useRef(false);
 
   useEffect(() => {
+    if (isDragging.current) return;
     fillPercent.value = withTiming(safePercent, {
       duration: FILL_DURATION_MS,
       easing: Easing.out(Easing.cubic),
@@ -74,12 +82,41 @@ export default function FuelLevelGauge({
     height: (fillPercent.value / 100) * tankHeight,
   }));
 
+  const dragLineStyle = useAnimatedStyle(() => {
+    const fillH = (fillPercent.value / 100) * tankHeight;
+    const top = Math.min(Math.max(tankHeight - fillH - 3, 0), tankHeight - 6);
+    return { top };
+  });
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => !!onPercentageChange,
+        onMoveShouldSetPanResponder: () => !!onPercentageChange,
+        onPanResponderGrant: (evt) => {
+          isDragging.current = true;
+          const pct = clamp((1 - evt.nativeEvent.locationY / tankHeight) * 100, 0, 100);
+          fillPercent.value = pct;
+          onPercentageChange?.(pct);
+        },
+        onPanResponderMove: (evt) => {
+          const pct = clamp((1 - evt.nativeEvent.locationY / tankHeight) * 100, 0, 100);
+          fillPercent.value = pct;
+          onPercentageChange?.(pct);
+        },
+        onPanResponderRelease: () => {
+          isDragging.current = false;
+        },
+      }),
+    [tankHeight, onPercentageChange, fillPercent],
+  );
+
   const animatedPercent = useAnimatedNumber(safePercent);
   const animatedLeft = useAnimatedNumber(safeLeft);
   const animatedUsed = useAnimatedNumber(safeUsed);
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, metricsPosition === "right" && styles.wrapperRight]}>
       <View style={styles.gaugeRow}>
         <View style={[styles.labelRail, { height: tankHeight }]}>
           <Text style={styles.railLabel}>F</Text>
@@ -87,25 +124,35 @@ export default function FuelLevelGauge({
           <Text style={styles.railLabel}>E</Text>
         </View>
 
-        <View style={[styles.tank, { height: tankHeight }]}>
+        <View
+          style={[styles.tank, { height: tankHeight }]}
+          {...(onPercentageChange ? panResponder.panHandlers : {})}
+        >
           <Animated.View style={[styles.fill, fillStyle]} />
+          {onPercentageChange && (
+            <Animated.View style={[styles.dragLine, dragLineStyle]}>
+              <View style={styles.dragHandle} />
+            </Animated.View>
+          )}
         </View>
       </View>
 
-      <View style={styles.metrics}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Fuel Level</Text>
-          <Text style={styles.metricValue}>{animatedPercent}%</Text>
+      {showMetrics && (
+        <View style={[styles.metrics, metricsPosition === "right" && styles.metricsRight]}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Fuel Level</Text>
+            <Text style={styles.metricValue}>{animatedPercent}%</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Range Left</Text>
+            <Text style={styles.metricValue}>{animatedLeft} km</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Range Used</Text>
+            <Text style={styles.metricValue}>{animatedUsed} km</Text>
+          </View>
         </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Range Left</Text>
-          <Text style={styles.metricValue}>{animatedLeft} km</Text>
-        </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Range Used</Text>
-          <Text style={styles.metricValue}>{animatedUsed} km</Text>
-        </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -113,16 +160,23 @@ export default function FuelLevelGauge({
 const styles = StyleSheet.create({
   wrapper: {
     gap: 14,
-    alignItems: "center",
+    alignItems: "stretch",
     backgroundColor: C.card,
     borderColor: C.cardBorder,
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
   },
+  wrapperRight: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    justifyContent: "space-between",
+    gap: 12,
+  },
   gaugeRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 12,
   },
   labelRail: {
@@ -145,7 +199,7 @@ const styles = StyleSheet.create({
   },
   tank: {
     width: 44,
-    borderRadius: 22,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: C.surfaceBorder,
     overflow: "hidden",
@@ -156,9 +210,27 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: C.tint,
   },
+  dragLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dragHandle: {
+    width: "80%",
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: "#fff",
+    opacity: 0.9,
+  },
   metrics: {
-    width: "100%",
+    flex: 1,
     gap: 8,
+  },
+  metricsRight: {
+    minWidth: 150,
   },
   metricCard: {
     borderWidth: 1,

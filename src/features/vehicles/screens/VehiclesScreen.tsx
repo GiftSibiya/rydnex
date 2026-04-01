@@ -29,6 +29,7 @@ const VehiclesScreen = () => {
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState<number | null>(null);
+  const [trim, setTrim] = useState("");
   const [vin, setVin] = useState("");
   const [registrationNumber, setRegistrationNumber] = useState("");
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -39,7 +40,7 @@ const VehiclesScreen = () => {
     [vehicles, activeVehicleId]
   );
 
-  const hasVehicleType = make && model && year;
+  const hasVehicleType = make && model && year && trim;
 
   const onLoad = async () => {
     if (!user?.id) return;
@@ -54,6 +55,7 @@ const VehiclesScreen = () => {
         make,
         model,
         year: year ?? undefined,
+        trim,
         vin,
         registration_number: registrationNumber,
         is_active: true,
@@ -62,6 +64,7 @@ const VehiclesScreen = () => {
       setMake("");
       setModel("");
       setYear(null);
+      setTrim("");
       setVin("");
       setRegistrationNumber("");
     } catch (error: any) {
@@ -73,8 +76,8 @@ const VehiclesScreen = () => {
   };
 
   const vehicleTypeLabel = hasVehicleType
-    ? `${year} ${make} ${model}`
-    : "Tap to select make, model & year";
+    ? `${year} ${make} ${model} ${trim}`
+    : "Tap to select make, model, year & trim";
 
   return (
     <ScreenScaffold title="Vehicles" subtitle="Create and manage your vehicle profiles">
@@ -125,7 +128,7 @@ const VehiclesScreen = () => {
                 {vehicleTypeLabel}
               </Text>
               {hasVehicleType && (
-                <Text style={styles.pickerTriggerSub}>Make · Model · Year</Text>
+                <Text style={styles.pickerTriggerSub}>Make · Model · Year · Trim</Text>
               )}
             </View>
           </View>
@@ -136,6 +139,7 @@ const VehiclesScreen = () => {
                   setMake("");
                   setModel("");
                   setYear(null);
+                  setTrim("");
                 }}
                 hitSlop={8}
                 style={styles.clearBtn}
@@ -229,6 +233,11 @@ const VehiclesScreen = () => {
                 <Text style={[styles.vehicleName, { color: colors.text }]}>
                   {item.year ? `${item.year} ` : ""}{item.make} {item.model}
                 </Text>
+                {item.trim ? (
+                  <Text style={[styles.vehicleReg, { color: colors.textMuted }]}>
+                    {item.trim}
+                  </Text>
+                ) : null}
                 <Text style={[styles.vehicleReg, { color: colors.textMuted }]}>
                   {item.registration_number}
                 </Text>
@@ -255,10 +264,11 @@ const VehiclesScreen = () => {
       <VehiclePickerModal
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
-        onConfirm={(m, mo, y) => {
+        onConfirm={(m, mo, y, t) => {
           setMake(m);
           setModel(mo);
           setYear(y);
+          setTrim(t);
         }}
       />
     </ScreenScaffold>
