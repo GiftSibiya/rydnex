@@ -2,9 +2,9 @@
 
 ## Authentication
 
-- Entry: `src/app/index.tsx` and `src/app/login.tsx`
-- Local session stored via `AuthContext` + AsyncStorage
-- Login requires basic valid email format; password is currently non-blocking for mock flow
+- Entry: `src/app/index.tsx`, `src/app/login.tsx`, `src/app/register.tsx`, `src/app/register-otp.tsx`
+- Session: `AuthContext` gates navigation after Zustand rehydration; JWT and user live in `AuthStore` (persist key `user-store`) so `SkaftinClient` can send `Authorization: Bearer`.
+- With `STATIC_DATA_MODE === true` (`src/constants/AppConfig.ts`), `authService` uses stubs. With `false`, login uses `POST /app-api/auth/login`, register uses `POST /app-api/auth/register`, and OTP verification uses `POST /app-api/auth/verify-otp` (see `client-sdk-mobile/requests/01-AUTH-REQUESTS.md`). Password minimum in UI matches Skaftin (8 characters).
 
 ## Dashboard (Home)
 

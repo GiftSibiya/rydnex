@@ -10,6 +10,8 @@ Defined in `src/app/_layout.tsx`.
 
 - `index` -> splash/get-started entry
 - `login` -> login screen
+- `register` -> registration (step 1; may complete in-app or continue to OTP)
+- `register-otp` -> email OTP verification after register when the backend requires it
 - `(tabs)` -> main authenticated tab shell
 - `reminders` -> reminders feature screen
 - `vehicle-details` -> active vehicle details screen
@@ -49,5 +51,5 @@ Current tab routes:
 ## Auth-Aware Flow
 
 - Entry point is `src/app/index.tsx`.
-- If session exists (`useAuth().isLoggedIn`), app redirects to `/(tabs)`.
-- If no session, user is prompted to continue to `/login`.
+- If session exists (`useAuth().isLoggedIn`, backed by `AuthStore` after hydration), app redirects to `/(tabs)`.
+- If no session, user is prompted to continue to `/login` (and can open `/register`).

@@ -52,4 +52,6 @@ Configured through `.env`:
 export const STATIC_DATA_MODE = true;
 ```
 
-This means the repository layer serves local fixture data instead of live backend calls for the current main flow.
+When `STATIC_DATA_MODE` is `true`, the repository layer and `authService` use local fixtures / stubs instead of live Skaftin HTTP calls.
+
+Set `STATIC_DATA_MODE` to `false` to use the real Skaftin API for auth and (when wired) database operations. You need at least `EXPO_PUBLIC_SKAFTIN_API_URL` and `EXPO_PUBLIC_SKAFTIN_API_KEY` in `.env`. Auth endpoints follow `client-sdk-mobile/requests/01-AUTH-REQUESTS.md` (`/app-api/auth/login`, `/app-api/auth/register`, etc.).

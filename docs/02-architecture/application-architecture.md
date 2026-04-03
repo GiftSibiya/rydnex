@@ -24,11 +24,11 @@
 
 The codebase currently has two parallel patterns:
 
-1. **Context + AsyncStorage path**
-   - `src/contexts/AuthContext.tsx`
+1. **Context + persistence path**
+   - `src/contexts/AuthContext.tsx` (Expo Router auth gate; delegates login/logout to `authService` + `AuthStore`)
    - `src/contexts/VehicleContext.tsx`
    - Used directly by many route screens under `src/app/(tabs)/*`
-   - Persists user and vehicle state locally in AsyncStorage keys
+   - Vehicle state uses AsyncStorage keys; auth session uses Zustand persist (`user-store`) for JWT + user profile
 
 2. **Zustand + Repository path**
    - `src/features/vehicles/store/useVehicleStore.ts`

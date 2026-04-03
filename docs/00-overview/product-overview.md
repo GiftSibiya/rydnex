@@ -29,7 +29,7 @@ The current app emphasizes:
 
 ## Current Feature Set (Implemented)
 
-- Auth-like local sign-in flow (email validation + local session persistence)
+- Sign-in and registration against Skaftin when `STATIC_DATA_MODE` is off; local stubs when on (JWT + user in `AuthStore` for API calls)
 - Garage management with free-tier vehicle cap (2 vehicles)
 - Dashboard with vehicle-specific metrics and quick actions
 - Logbook timeline (service, fuel, odometer)

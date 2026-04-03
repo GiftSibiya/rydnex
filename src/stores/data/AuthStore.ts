@@ -61,10 +61,11 @@ const useAuthStore = create<AuthState>()(
 
       // Primary login action — stores everything from the API response
       setAuthFromLogin: (data: LoginResponseData) => {
-        const { user, accessToken } = data;
+        const { user, accessToken, organisation } = data;
         set({
           user,
           accessToken,
+          organisation: organisation ?? null,
           // Keep legacy fields in sync
           user_id: user.id,
           user_name: user.name,
@@ -79,6 +80,7 @@ const useAuthStore = create<AuthState>()(
         set({
           user,
           accessToken,
+          organisation: null,
           // Keep legacy fields in sync
           user_id: user.id,
           user_name: user.name,
@@ -143,7 +145,11 @@ const useAuthStore = create<AuthState>()(
         } catch {
           // Proceed with local logout regardless of API result
         }
-        AsyncStorage.clear();
+        try {
+          useAuthStore.persist.clearStorage();
+        } catch {
+          await AsyncStorage.removeItem('user-store');
+        }
         set({ ...initialState });
       },
     }),

@@ -45,9 +45,11 @@ Vehicle context persistence keys:
 - `rydnex_part_rules`
 - `rydnex_license_disks`
 
-Auth context key:
+## Session (auth)
 
-- `rydnex_auth`
+- JWT and user profile for API calls are stored in the Zustand persist slice `user-store` (`src/stores/data/AuthStore.ts`). `AuthContext` reads hydration and the same store so Expo Router gating and `SkaftinClient` Bearer injection stay aligned.
+- With `STATIC_DATA_MODE === false`, login and registration call Skaftin `/app-api/auth/*` via `authService` and populate that store.
+- The legacy AsyncStorage key `rydnex_auth` is no longer the source of truth for signed-in state in the Expo Router flow.
 
 ## Free Tier Rules
 

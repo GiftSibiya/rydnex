@@ -16,6 +16,12 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+/** Extra options for `request` / `post` — not passed to `fetch`. */
+export type SkaftinRequestOptions = RequestInit & {
+  /** When true, only platform auth (API key); no Bearer from AuthStore (login/register/verify-otp). */
+  skipUserAuthorization?: boolean;
+};
+
 class SkaftinClient {
   private config: {
     apiUrl: string;
@@ -97,18 +103,22 @@ class SkaftinClient {
     return headers;
   }
 
-  private buildHeaders(customHeaders: Record<string, string> = {}, isFormData = false): HeadersInit {
+  private buildHeaders(
+    customHeaders: Record<string, string> = {},
+    isFormData = false,
+    skipUserAuthorization = false
+  ): HeadersInit {
     const headers: Record<string, string> = {
       ...(this.getAuthHeaders() as Record<string, string>),
       ...customHeaders,
     };
 
-    // Always add Authorization Bearer token if user is authenticated
-    // Get token from AuthStore (stored after login)
-    const userState = useAuthStore.getState();
-    const jwtToken = userState.accessToken;
-    if (jwtToken && !headers['Authorization']) {
-      headers['Authorization'] = `Bearer ${jwtToken}`;
+    if (!skipUserAuthorization) {
+      const userState = useAuthStore.getState();
+      const jwtToken = userState.accessToken;
+      if (jwtToken && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${jwtToken}`;
+      }
     }
 
     // CRITICAL: When using FormData, DO NOT set Content-Type header
@@ -140,39 +150,39 @@ class SkaftinClient {
     }
   }
 
-  async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  async request<T>(endpoint: string, options: SkaftinRequestOptions = {}): Promise<ApiResponse<T>> {
     if (!this.initialized) throw new Error('Skaftin client not initialized');
 
+    const { skipUserAuthorization, ...fetchInit } = options;
     const url = `${this.config.apiUrl}${endpoint}`;
-    const method = options.method || 'GET';
-    const isFormData = options.body instanceof FormData;
+    const method = fetchInit.method || 'GET';
+    const isFormData = fetchInit.body instanceof FormData;
 
     const headers = this.buildHeaders(
-      (options.headers as Record<string, string>) || {},
-      isFormData
+      (fetchInit.headers as Record<string, string>) || {},
+      isFormData,
+      !!skipUserAuthorization
     );
 
     let finalBody: BodyInit | undefined;
     if (isFormData) {
-      finalBody = options.body as FormData;
-    } else if (options.body) {
-      finalBody = typeof options.body === 'string' 
-        ? options.body 
-        : JSON.stringify(options.body);
+      finalBody = fetchInit.body as FormData;
+    } else if (fetchInit.body) {
+      finalBody = typeof fetchInit.body === 'string'
+        ? fetchInit.body
+        : JSON.stringify(fetchInit.body);
     }
 
     // Log request in development mode
     if (__DEV__) {
-      console.log(`[${method}] ${endpoint}`, options.body || '');
+      console.log(`[${method}] ${endpoint}`, fetchInit.body || '');
     }
 
     try {
       const response = await fetch(url, {
-        ...options,
+        ...fetchInit,
         method,
         headers,
-        // Note: 'credentials' is not supported in React Native fetch
-        // Use Authorization headers instead for authentication
         body: finalBody,
       });
 
@@ -184,15 +194,15 @@ class SkaftinClient {
       }
 
       // Handle 401 — attempt session refresh then retry once
-      if (response.status === 401 && this.isUserAuthenticated()) {
+      if (response.status === 401 && this.isUserAuthenticated() && !skipUserAuthorization) {
         const refreshed = await this.attemptSessionRefresh();
         if (refreshed) {
-          // Retry the original request with fresh headers
           const retryHeaders = this.buildHeaders(
-            (options.headers as Record<string, string>) || {},
-            isFormData
+            (fetchInit.headers as Record<string, string>) || {},
+            isFormData,
+            !!skipUserAuthorization
           );
-          const retryResponse = await fetch(url, { ...options, method, headers: retryHeaders, body: finalBody });
+          const retryResponse = await fetch(url, { ...fetchInit, method, headers: retryHeaders, body: finalBody });
           const retryData = await retryResponse.json();
           if (!retryResponse.ok) {
             const errorMsg = retryData.message || retryData.error || `Request failed with status ${retryResponse.status}`;
@@ -245,8 +255,16 @@ class SkaftinClient {
     return this.request<T>(url, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
-    return this.request<T>(endpoint, { method: 'POST', body });
+  async post<T>(
+    endpoint: string,
+    body?: any,
+    opts?: { skipUserAuthorization?: boolean }
+  ): Promise<ApiResponse<T>> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body,
+      skipUserAuthorization: opts?.skipUserAuthorization,
+    });
   }
 
   async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
