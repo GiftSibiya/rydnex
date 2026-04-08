@@ -135,6 +135,28 @@ class SkaftinClient {
 
   private refreshing = false;
 
+  /**
+   * Parse JSON bodies; avoid `response.json()` on HTML error pages (wrong base URL / proxy).
+   */
+  private async parseResponseBody(response: Response, endpoint: string): Promise<Record<string, unknown>> {
+    const text = await response.text();
+    const trimmed = text.trim();
+    if (!trimmed) return {};
+    if (trimmed.startsWith('<') || trimmed.startsWith('<!')) {
+      const hint =
+        'The server returned HTML, not JSON. Use EXPO_PUBLIC_SKAFTIN_API_URL as the API host root ' +
+        '(no trailing /app-api), and confirm the device can reach it (same VPN if required).';
+      throw new Error(`${hint} Request: ${endpoint} HTTP ${response.status}`);
+    }
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      throw new Error(
+        `Skaftin response was not valid JSON (HTTP ${response.status}). First bytes: ${trimmed.slice(0, 80)}`
+      );
+    }
+  }
+
   private async attemptSessionRefresh(): Promise<boolean> {
     if (this.refreshing) return false;
     this.refreshing = true;
@@ -186,7 +208,7 @@ class SkaftinClient {
         body: finalBody,
       });
 
-      const data = await response.json();
+      const data = await this.parseResponseBody(response, `${method} ${endpoint}`);
 
       // Log response in development mode
       if (__DEV__) {
@@ -203,29 +225,33 @@ class SkaftinClient {
             !!skipUserAuthorization
           );
           const retryResponse = await fetch(url, { ...fetchInit, method, headers: retryHeaders, body: finalBody });
-          const retryData = await retryResponse.json();
+          const retryData = await this.parseResponseBody(retryResponse, `${method} ${endpoint} (retry)`);
           if (!retryResponse.ok) {
-            const errorMsg = retryData.message || retryData.error || `Request failed with status ${retryResponse.status}`;
+            const errorMsg =
+              (retryData.message as string) ||
+              (retryData.error as string) ||
+              `Request failed with status ${retryResponse.status}`;
             const error = new Error(errorMsg);
             (error as any).status = retryResponse.status;
             (error as any).data = retryData;
             throw error;
           }
-          return retryData;
+          return retryData as unknown as ApiResponse<T>;
         }
         // Refresh failed — clear auth state
         useAuthStore.getState().logout();
       }
 
       if (!response.ok) {
-        const errorMsg = data.message || data.error || `Request failed with status ${response.status}`;
+        const errorMsg =
+          (data.message as string) || (data.error as string) || `Request failed with status ${response.status}`;
         const error = new Error(errorMsg);
         (error as any).status = response.status;
         (error as any).data = data;
         throw error;
       }
 
-      return data;
+      return data as unknown as ApiResponse<T>;
     } catch (error: any) {
       if (__DEV__) {
         console.error(`[${method}] ${endpoint} ❌`, error);

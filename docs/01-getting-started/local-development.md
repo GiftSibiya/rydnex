@@ -39,7 +39,7 @@ Both run `expo start --localhost`.
 
 Configured through `.env`:
 
-- `EXPO_PUBLIC_SKAFTIN_API_URL`
+- `EXPO_PUBLIC_SKAFTIN_API_URL` — API host root only (e.g. `https://api.example.com`), no `/app-api` suffix. If this points at a website that serves HTML, requests will fail with a clear client error instead of a JSON parse exception.
 - `EXPO_PUBLIC_SKAFTIN_API_KEY`
 - `EXPO_PUBLIC_SKAFTIN_ACCESS_TOKEN`
 - `EXPO_PUBLIC_SKAFTIN_BUCKET_NAME`

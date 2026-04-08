@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AuthUser, AuthOrganisation, AuthUserRole, LoginResponseData, RegistrationResponseData } from '@/types/Types';
-import { authService } from '@/backend';
 
 interface AuthState {
   // User fields
@@ -141,6 +140,7 @@ const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try {
+          const { authService } = await import('@/backend/services/AuthService');
           await authService.logout();
         } catch {
           // Proceed with local logout regardless of API result

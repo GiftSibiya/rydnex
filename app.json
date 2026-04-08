@@ -17,7 +17,8 @@
       "supportsTablet": false
     },
     "android": {
-      "backgroundColor": "#0A0A0B"
+      "backgroundColor": "#0A0A0B",
+      "package": "com.b0b0.rydnex"
     },
     "web": {
       "favicon": "./assets/images/icon.png",
