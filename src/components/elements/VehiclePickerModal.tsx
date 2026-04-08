@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -14,6 +14,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CAR_LOGOS from "@/constants/carLogos";
 import Colors from "../../constants/colors";
+import skaftinClient from "@/backend/client/SkaftinClient";
+import routes from "@/constants/ApiRoutes";
 import vehicleMakesData from "../../../assets/json/vehicleMakes.json";
 import vehicleModelsData from "../../../assets/json/vehicleModels.json";
 import vehicleTrimsData from "../../../assets/json/vehicleTrims.json";
@@ -26,9 +28,9 @@ type Make = { makeId: string; makeName: string; makeSlug: string; countryOfOrigi
 type Model = { modelId: string; makeId: string; modelName: string; modelSlug: string; modelYear: number };
 type Trim = { trimId: string; modelId: string; trimName: string; trimSlug: string };
 
-const MAKES: Make[] = vehicleMakesData as Make[];
-const MODELS: Model[] = vehicleModelsData as Model[];
-const TRIMS: Trim[] = vehicleTrimsData as Trim[];
+const STATIC_MAKES: Make[] = vehicleMakesData as Make[];
+const STATIC_MODELS: Model[] = vehicleModelsData as Model[];
+const STATIC_TRIMS: Trim[] = vehicleTrimsData as Trim[];
 
 const STEP_ORDER: Step[] = ["make", "year", "model", "trim"];
 const STEP_LABELS: Record<Step, string> = {
@@ -54,37 +56,90 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   const [selectedModelId, setSelectedModelId] = useState("");
   const [selectedModelName, setSelectedModelName] = useState("");
   const [search, setSearch] = useState("");
+  const [makes, setMakes] = useState<Make[]>(STATIC_MAKES);
+  const [models, setModels] = useState<Model[]>(STATIC_MODELS);
+  const [trims, setTrims] = useState<Trim[]>(STATIC_TRIMS);
   const searchRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCatalog = async () => {
+      if (!visible) return;
+      try {
+        const [makesRes, modelsRes, trimsRes] = await Promise.all([
+          skaftinClient.get<any[]>(routes.catalog.makes),
+          skaftinClient.get<any[]>(routes.catalog.models),
+          skaftinClient.get<any[]>(routes.catalog.trims),
+        ]);
+
+        const remoteMakes = (makesRes.data ?? []).map((row) => ({
+          makeId: String(row.make_id ?? ""),
+          makeName: String(row.make_name ?? ""),
+          makeSlug: String(row.make_slug ?? ""),
+          countryOfOrigin: row.country_of_origin ? String(row.country_of_origin) : "",
+        }));
+        const remoteModels = (modelsRes.data ?? []).map((row) => ({
+          modelId: String(row.model_id ?? ""),
+          makeId: String(row.make_id ?? ""),
+          modelName: String(row.model_name ?? ""),
+          modelSlug: String(row.model_slug ?? ""),
+          modelYear: Number(row.model_year),
+        }));
+        const remoteTrims = (trimsRes.data ?? []).map((row) => ({
+          trimId: String(row.trim_id ?? ""),
+          modelId: String(row.model_id ?? ""),
+          trimName: String(row.trim_name ?? ""),
+          trimSlug: String(row.trim_slug ?? ""),
+        }));
+
+        if (cancelled) return;
+        setMakes(remoteMakes.length > 0 ? remoteMakes : STATIC_MAKES);
+        setModels(remoteModels.length > 0 ? remoteModels : STATIC_MODELS);
+        setTrims(remoteTrims.length > 0 ? remoteTrims : STATIC_TRIMS);
+      } catch {
+        if (cancelled) return;
+        // Keep picker usable when backend is temporarily unavailable.
+        setMakes(STATIC_MAKES);
+        setModels(STATIC_MODELS);
+        setTrims(STATIC_TRIMS);
+      }
+    };
+
+    loadCatalog();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   const stepIndex = STEP_ORDER.indexOf(step);
 
   const yearsByMakeId = useMemo(() => {
     const byMake = new Map<string, Set<number>>();
 
-    for (const model of MODELS) {
+    for (const model of models) {
       if (!byMake.has(model.makeId)) byMake.set(model.makeId, new Set<number>());
       byMake.get(model.makeId)?.add(model.modelYear);
     }
 
     return byMake;
-  }, []);
+  }, [models]);
 
   const modelsByMakeIdAndYear = useMemo(() => {
     const byKey = new Map<string, Model[]>();
 
-    for (const model of MODELS) {
+    for (const model of models) {
       const key = `${model.makeId}|${model.modelYear}`;
       if (!byKey.has(key)) byKey.set(key, []);
       byKey.get(key)?.push(model);
     }
 
     return byKey;
-  }, []);
+  }, [models]);
 
   const trimNamesByModelId = useMemo(() => {
     const byModel = new Map<string, Set<string>>();
 
-    for (const trim of TRIMS) {
+    for (const trim of trims) {
       const normalizedName = trim.trimName.trim();
       const safeTrimName = normalizedName && normalizedName !== "-" ? normalizedName : "Base";
       if (!byModel.has(trim.modelId)) byModel.set(trim.modelId, new Set<string>());
@@ -92,16 +147,16 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
     }
 
     return byModel;
-  }, []);
+  }, [trims]);
 
   const filteredMakes = useMemo(() => {
     const q = search.toLowerCase();
-    return MAKES.filter(
+    return makes.filter(
       (m) =>
         m.makeName.toLowerCase().includes(q) ||
         (m.countryOfOrigin || "").toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [makes, search]);
 
   const years = useMemo(() => {
     if (!selectedMakeId) return [];

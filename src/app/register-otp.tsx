@@ -15,8 +15,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { authService } from "@/backend";
 import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
-import { useAuth } from "@/contexts/AuthContext";
+import { AuthStore } from "@/stores/StoresIndex";
 
 const C = Colors.dark;
 const OTP_LENGTH = 6;
@@ -25,8 +26,8 @@ const RESEND_SECONDS = 60;
 export default function RegisterOtpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
-  const { name, email, password } = useLocalSearchParams<{ name: string; email: string; password: string }>();
+  const { setAuthFromRegistration } = AuthStore();
+  const { email, userId } = useLocalSearchParams<{ email: string; userId: string }>();
 
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -94,26 +95,55 @@ export default function RegisterOtpScreen() {
   };
 
   const handleVerify = async () => {
+    const parsedUserId = Number(userId);
+    if (!Number.isFinite(parsedUserId) || parsedUserId <= 0) {
+      setError("Missing verification context. Please register again.");
+      return;
+    }
     const code = digits.join("");
     if (code.length < OTP_LENGTH) {
       setError("Please enter the full 6-digit code");
       return;
     }
     setLoading(true);
-    const result = await login(email, password);
-    setLoading(false);
-    if (result.success) {
+    try {
+      const result = await authService.verifyRegistrationOtp(parsedUserId, code);
+      if (!result.success) {
+        setError(result.message ?? result.error ?? "Verification failed");
+        return;
+      }
+      if (result.data) {
+        setAuthFromRegistration(result.data);
+      }
       router.replace("/(tabs)");
-    } else {
-      setError(result.error ?? "Verification failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Verification failed");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
+    const parsedUserId = Number(userId);
+    if (!Number.isFinite(parsedUserId) || parsedUserId <= 0) {
+      setError("Unable to resend code. Please register again.");
+      return;
+    }
     if (countdown > 0) return;
-    setCountdown(RESEND_SECONDS);
-    setDigits(Array(OTP_LENGTH).fill(""));
-    inputRefs.current[0]?.focus();
+    setLoading(true);
+    setError("");
+    try {
+      const result = await authService.resendRegistrationOtp(parsedUserId);
+      if (!result.success) {
+        setError(result.message ?? result.error ?? "Failed to resend code");
+        return;
+      }
+      setCountdown(RESEND_SECONDS);
+      setDigits(Array(OTP_LENGTH).fill(""));
+      inputRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -157,7 +187,7 @@ export default function RegisterOtpScreen() {
             We sent a 6-digit code to{"\n"}
             <Text style={styles.emailHighlight}>{maskedEmail}</Text>
           </Text>
-          <Text style={styles.hint}>Enter any 6 digits to continue</Text>
+          <Text style={styles.hint}>Enter the 6-digit code to continue</Text>
         </Animated.View>
 
         {/* OTP Boxes */}

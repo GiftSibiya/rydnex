@@ -8,6 +8,7 @@
     "start": "expo start --localhost",
     "build": "node scripts/build.js",
     "build:vehicle-json": "node scripts/build-vehicle-json.js",
+    "export:vehicle-csv": "node scripts/export-vehicle-catalog-csv.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

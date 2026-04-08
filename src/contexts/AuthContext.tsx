@@ -1,5 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { authService } from "@/backend";
+import { AuthStore } from "@/stores/StoresIndex";
 
 type AuthContextType = {
   isLoggedIn: boolean;
@@ -13,45 +14,48 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const AUTH_KEY = "rydnex_auth";
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const accessToken = AuthStore((state) => state.accessToken);
+  const user = AuthStore((state) => state.user);
+  const { setAuthFromLogin, updateUser } = AuthStore();
   const [isLoading, setIsLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
+  const isLoggedIn = !!accessToken;
+  const userEmail = user?.email ?? null;
+  const userName = user?.name ?? null;
 
   useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(AUTH_KEY);
-        if (raw) {
-          const data = JSON.parse(raw);
-          setIsLoggedIn(true);
-          setUserEmail(data.email ?? null);
-          setUserName(data.name ?? null);
-        }
-      } catch {}
+    if (AuthStore.persist.hasHydrated()) {
       setIsLoading(false);
-    })();
+      return;
+    }
+    const unsubscribe = AuthStore.persist.onFinishHydration(() => {
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  const login = useCallback(async (email: string, _password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     if (!email.trim()) return { success: false, error: "Email is required" };
     if (!email.includes("@")) return { success: false, error: "Enter a valid email" };
-    const existing = await AsyncStorage.getItem(AUTH_KEY);
-    const prev = existing ? JSON.parse(existing) : {};
-    await AsyncStorage.setItem(AUTH_KEY, JSON.stringify({ ...prev, email: email.trim() }));
-    setIsLoggedIn(true);
-    setUserEmail(email.trim());
-    return { success: true };
-  }, []);
+    if (!password.trim()) return { success: false, error: "Password is required" };
+
+    try {
+      const response = await authService.login({
+        email: email.trim(),
+        password,
+      });
+      if (!response.success) {
+        return { success: false, error: response.message ?? response.error ?? "Login failed" };
+      }
+      setAuthFromLogin(response.data);
+      return { success: true };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : "Login failed" };
+    }
+  }, [setAuthFromLogin]);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem(AUTH_KEY);
-    setIsLoggedIn(false);
-    setUserEmail(null);
-    setUserName(null);
+    await AuthStore.getState().logout();
   }, []);
 
   const updateAccount = useCallback(async ({ name, email, password }: { name?: string; email?: string; password?: string }) => {
@@ -60,22 +64,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!email.includes("@")) return { success: false, error: "Enter a valid email address" };
     }
     try {
-      const raw = await AsyncStorage.getItem(AUTH_KEY);
-      const prev = raw ? JSON.parse(raw) : {};
-      const updated = {
-        ...prev,
-        ...(name !== undefined ? { name: name.trim() } : {}),
-        ...(email !== undefined ? { email: email.trim() } : {}),
-        ...(password !== undefined && password.length > 0 ? { password } : {}),
-      };
-      await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(updated));
-      if (email !== undefined) setUserEmail(email.trim());
-      if (name !== undefined) setUserName(name.trim());
+      const patch: { name?: string; email?: string } = {};
+      if (name !== undefined) patch.name = name.trim();
+      if (email !== undefined) patch.email = email.trim();
+      if (Object.keys(patch).length > 0) {
+        updateUser(patch);
+      }
+      if (password !== undefined && password.length > 0) {
+        // Password update endpoint is not wired in this context flow yet.
+      }
       return { success: true };
     } catch {
       return { success: false, error: "Failed to save changes" };
     }
-  }, []);
+  }, [updateUser]);
 
   if (isLoading) return null;
 

@@ -55,6 +55,13 @@ Vehicle context persistence keys:
 
 Current free-tier limit is 2 vehicles (implemented in both context and store flows).
 
+## Vehicle Catalog CSV Pipeline
+
+- Source catalog data lives in `assets/json/vehicle*.json`.
+- Export command `npm run export:vehicle-csv` converts those JSON assets into import-ready CSVs under `assets/csv/vehicle-catalog/`.
+- Full DB table mapping and manual import order are documented in `docs/03-database/vehicle-catalog-import.md`.
+- Vehicle picker runtime now fetches catalog records from DB-backed tables (`vehicle_makes_catalog`, `vehicle_models_catalog`, `vehicle_trims_catalog`) via Skaftin table select routes, with JSON assets as fallback.
+
 ## Efficiency and Reminder Calculations
 
 Core utility file: `src/features/efficiency/utils/efficiency.ts`

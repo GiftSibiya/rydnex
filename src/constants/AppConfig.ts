@@ -1,1 +1,1 @@
-export const STATIC_DATA_MODE = true;
+export const STATIC_DATA_MODE = false;

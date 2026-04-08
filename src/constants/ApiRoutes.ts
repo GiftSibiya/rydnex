@@ -21,6 +21,11 @@ const routes = {
     create: '/app-api/database/tables/vehicles/insert',
     update: '/app-api/database/tables/vehicles/update',
   },
+  catalog: {
+    makes: '/app-api/database/tables/vehicle_makes_catalog/select',
+    models: '/app-api/database/tables/vehicle_models_catalog/select',
+    trims: '/app-api/database/tables/vehicle_trims_catalog/select',
+  },
   maintenance: {
     odometer: '/app-api/database/tables/odometer_logs',
     services: '/app-api/database/tables/service_logs',

@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { authService } from "@/backend";
 import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
 
 const C = Colors.dark;
@@ -26,6 +27,8 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
+  const [formError, setFormError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -61,16 +64,65 @@ export default function RegisterScreen() {
     return e;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const e = validate();
     if (Object.keys(e).length > 0) {
       setErrors(e);
       return;
     }
-    router.push({
-      pathname: "/register-otp",
-      params: { name: name.trim(), email: email.trim(), password },
-    });
+    setFormError("");
+    setLoading(true);
+    try {
+      const trimmedName = name.trim();
+      const trimmedEmail = email.trim();
+      const response = await authService.register({
+        name: trimmedName,
+        email: trimmedEmail,
+        password,
+      });
+
+      if (!response.success) {
+        setFormError(response.message ?? response.error ?? "Registration failed. Please try again.");
+        return;
+      }
+
+      if ("requiresOtp" in response && response.requiresOtp && response.userId) {
+        router.push({
+          pathname: "/register-otp",
+          params: {
+            name: trimmedName,
+            userId: String(response.userId),
+            email: response.email ?? trimmedEmail,
+            password,
+          },
+        });
+        return;
+      }
+
+      if ("data" in response && response.data) {
+        const userId = response.data.user?.id;
+        if (!userId) {
+          setFormError(response.message ?? "Registration succeeded but verification context is missing.");
+          return;
+        }
+        router.push({
+          pathname: "/register-otp",
+          params: {
+            name: trimmedName,
+            userId: String(userId),
+            email: response.data.user.email ?? trimmedEmail,
+            password,
+          },
+        });
+        return;
+      }
+
+      setFormError(response.message ?? "Verification setup failed. Please try registering again.");
+    } catch (error: unknown) {
+      setFormError(error instanceof Error ? error.message : "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -181,9 +233,10 @@ export default function RegisterScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.continueBtn}
+            style={[styles.continueBtn, loading && styles.continueBtnDisabled]}
             onPress={handleContinue}
             activeOpacity={0.85}
+            disabled={loading}
           >
             <LinearGradient
               colors={[GREEN, GREEN_DARK]}
@@ -191,10 +244,23 @@ export default function RegisterScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.continueBtnText}>Continue</Text>
-              <Feather name="arrow-right" size={18} color="#fff" />
+              {loading ? (
+                <Text style={styles.continueBtnText}>Sending code...</Text>
+              ) : (
+                <>
+                  <Text style={styles.continueBtnText}>Continue</Text>
+                  <Feather name="arrow-right" size={18} color="#fff" />
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
+
+          {formError ? (
+            <View style={styles.errorBanner}>
+              <Feather name="alert-circle" size={14} color={C.danger} />
+              <Text style={styles.errorText}>{formError}</Text>
+            </View>
+          ) : null}
         </Animated.View>
 
         {/* Footer */}
@@ -324,6 +390,9 @@ const styles = StyleSheet.create({
     elevation: 6,
     marginTop: 4,
   },
+  continueBtnDisabled: {
+    opacity: 0.75,
+  },
   continueBtnGradient: {
     height: 54,
     flexDirection: "row",
@@ -336,6 +405,23 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: "#fff",
     letterSpacing: 0.1,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(231,76,60,0.1)",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "rgba(231,76,60,0.2)",
+  },
+  errorText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: C.danger,
+    flex: 1,
   },
   footer: {
     flexDirection: "row",

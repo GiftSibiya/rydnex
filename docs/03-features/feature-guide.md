@@ -5,7 +5,9 @@
 - Entry: `src/app/index.tsx`, `src/app/login.tsx`, `src/app/register.tsx`, `src/app/register-otp.tsx`
 - Session: `AuthContext` gates navigation after Zustand rehydration; JWT and user live in `AuthStore` (persist key `user-store`) so `SkaftinClient` can send `Authorization: Bearer`.
 - With `STATIC_DATA_MODE === true` (`src/constants/AppConfig.ts`), `authService` uses stubs. With `false`, login uses `POST /app-api/auth/auth/login`, register uses `POST /app-api/auth/auth/register`, OTP verification uses `POST /app-api/auth/auth/verify-otp` with `{ user_id, otp }`, and OTP resend uses `POST /app-api/auth/auth/resend-otp` (see `client-sdk-mobile/requests/01-AUTH-REQUESTS.md`).
-- Legacy React Navigation auth screens (`src/pages/auth/RegistrationScreen.tsx`, `src/pages/auth/RegistrationOtpScreen.tsx`) now run the backend flow end-to-end: register response either returns a session immediately or returns OTP continuation metadata (`requiresOtp`, `userId`) used by step 2.
+- Expo Router auth screens (`src/app/register.tsx`, `src/app/register-otp.tsx`) now initiate backend registration before OTP step routing; register returns OTP continuation metadata (`requiresOtp`, `userId`) used to continue verification.
+- `src/app/register-otp.tsx` verifies codes via `POST /app-api/auth/auth/verify-otp` with `{ user_id, otp }`, supports resend via `POST /app-api/auth/auth/resend-otp`, and stores the verified session in `AuthStore`.
+- Legacy React Navigation auth screens (`src/pages/auth/RegistrationScreen.tsx`, `src/pages/auth/RegistrationOtpScreen.tsx`) also follow the backend register and OTP continuation flow.
 
 ## Dashboard (Home)
 

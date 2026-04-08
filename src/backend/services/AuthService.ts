@@ -281,7 +281,7 @@ class AuthService {
     userId: number,
     otp: string
   ): Promise<
-    | { success: true; data: RegistrationResponseData }
+    | { success: true; data: RegistrationResponseData | null; message?: string }
     | { success: false; message?: string; error?: string }
   > {
     if (STATIC_DATA_MODE) {
@@ -315,12 +315,9 @@ class AuthService {
       const payloadData = res.data as Record<string, unknown> | null | undefined;
       const mapped = registrationDataFromApi(payloadData ?? null);
       if (!mapped) {
-        return {
-          success: false,
-          message: res.message ?? 'Verification failed',
-        };
+        return { success: true, data: null, message: res.message };
       }
-      return { success: true, data: mapped };
+      return { success: true, data: mapped, message: res.message };
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Verification failed';
       return { success: false, message };
