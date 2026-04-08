@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useNavigation, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
   Alert,
@@ -47,7 +47,6 @@ function ComingSoonItem({ icon, title, description }: ComingSoonItemProps) {
 export default function ProfileScreen() {
   const { vehicles, FREE_TIER_LIMIT } = useVehicle();
   const { logout, userEmail, userName } = useAuth();
-  const navigation = useNavigation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -62,7 +61,9 @@ export default function ProfileScreen() {
         onPress: async () => {
           await logout();
           router.replace("/");
-          navigation.navigate("Splash" as never);
+          setTimeout(() => {
+            router.replace("/login");
+          }, 900);
         },
       },
     ]);

@@ -79,4 +79,5 @@
 - Account summary and edit account navigation
 - Reminders shortcut
 - App actions (about/rate/share/feedback/sign out)
+- Sign out clears session, navigates to splash (`/`), then routes to login (`/login`)
 - Coming-soon cards for future partner and premium capabilities
