@@ -20,7 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONT_FAMILY } from '@/constants/Fonts';
 import { authService } from '@/backend';
-import { ToastStateStore } from '@/stores/StoresIndex';
+import { AuthStore, ToastStateStore } from '@/stores/StoresIndex';
 
 const C = {
   bg: '#F5F4EE',
@@ -37,6 +37,7 @@ const C = {
 const RegistrationScreen = () => {
   const navigation = useNavigation<any>();
   const { showToast } = ToastStateStore();
+  const { setAuthFromRegistration } = AuthStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,8 +80,32 @@ const RegistrationScreen = () => {
     }
     setLoading(true);
     try {
-      const response = await authService.register({ name, email, password });
-      navigation.navigate('RegistrationOtp', { data: response.data, email });
+      const response = await authService.register({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+      });
+
+      if (!response.success) {
+        showToast({ message: response.message ?? response.error ?? 'Registration failed.', type: 'error' });
+        return;
+      }
+
+      if (response.data) {
+        setAuthFromRegistration(response.data);
+        showToast({ message: response.message ?? 'Account created successfully.', type: 'success' });
+        return;
+      }
+
+      if (response.requiresOtp && response.userId) {
+        navigation.navigate('RegistrationOtp', { userId: response.userId, email: response.email ?? email.trim() });
+        return;
+      }
+
+      showToast({
+        message: response.message ?? 'Verification setup failed. Please try registering again.',
+        type: 'error',
+      });
     } catch (error: any) {
       showToast({ message: error?.message ?? 'Registration failed.', type: 'error' });
     } finally {

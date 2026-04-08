@@ -11,7 +11,7 @@ Defined in `src/app/_layout.tsx`.
 - `index` -> splash/get-started entry
 - `login` -> login screen
 - `register` -> registration (step 1; may complete in-app or continue to OTP)
-- `register-otp` -> email OTP verification after register when the backend requires it
+- `register-otp` -> email OTP verification after register when the backend requires it (verification payload uses `user_id` + `otp`)
 - `(tabs)` -> main authenticated tab shell
 - `reminders` -> reminders feature screen
 - `vehicle-details` -> active vehicle details screen

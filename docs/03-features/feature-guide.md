@@ -4,7 +4,8 @@
 
 - Entry: `src/app/index.tsx`, `src/app/login.tsx`, `src/app/register.tsx`, `src/app/register-otp.tsx`
 - Session: `AuthContext` gates navigation after Zustand rehydration; JWT and user live in `AuthStore` (persist key `user-store`) so `SkaftinClient` can send `Authorization: Bearer`.
-- With `STATIC_DATA_MODE === true` (`src/constants/AppConfig.ts`), `authService` uses stubs. With `false`, login uses `POST /app-api/auth/login`, register uses `POST /app-api/auth/register`, and OTP verification uses `POST /app-api/auth/verify-otp` (see `client-sdk-mobile/requests/01-AUTH-REQUESTS.md`). Password minimum in UI matches Skaftin (8 characters).
+- With `STATIC_DATA_MODE === true` (`src/constants/AppConfig.ts`), `authService` uses stubs. With `false`, login uses `POST /app-api/auth/auth/login`, register uses `POST /app-api/auth/auth/register`, OTP verification uses `POST /app-api/auth/auth/verify-otp` with `{ user_id, otp }`, and OTP resend uses `POST /app-api/auth/auth/resend-otp` (see `client-sdk-mobile/requests/01-AUTH-REQUESTS.md`).
+- Legacy React Navigation auth screens (`src/pages/auth/RegistrationScreen.tsx`, `src/pages/auth/RegistrationOtpScreen.tsx`) now run the backend flow end-to-end: register response either returns a session immediately or returns OTP continuation metadata (`requiresOtp`, `userId`) used by step 2.
 
 ## Dashboard (Home)
 

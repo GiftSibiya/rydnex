@@ -16,7 +16,7 @@ type RegisterPayload = { name: string; email: string; password: string };
 /** When register succeeds but email OTP is required before a session exists. */
 export type RegisterResult =
   | ApiResponseType<RegistrationResponseData>
-  | { success: true; requiresOtp: true; message?: string; data: null }
+  | { success: true; requiresOtp: true; message?: string; data: null; userId?: number; email?: string }
   | { success: false; message?: string; error?: string; data: null };
 
 export type LoginResult =
@@ -227,21 +227,58 @@ class AuthService {
       if (mapped) {
         return { success: true, data: mapped } as ApiResponseType<RegistrationResponseData>;
       }
+      const userData =
+        payloadData?.user && typeof payloadData.user === 'object'
+          ? (payloadData.user as Record<string, unknown>)
+          : null;
+      const userId =
+        userData?.id != null
+          ? Number(userData.id)
+          : payloadData?.user_id != null
+            ? Number(payloadData.user_id)
+            : undefined;
 
       return {
         success: true,
         requiresOtp: true,
         message: res.message ?? 'Check your email for a verification code.',
         data: null,
+        userId: Number.isFinite(userId) ? userId : undefined,
+        email: payload.email.trim(),
       };
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Registration failed';
+      const body = parseThrownApiBody(e);
+      const nested =
+        body?.data && typeof body.data === 'object'
+          ? (body.data as Record<string, unknown>)
+          : null;
+      const requiresOtp =
+        nested?.requires_otp === true || body?.requires_otp === true;
+      const userId =
+        typeof nested?.user_id === 'number'
+          ? nested.user_id
+          : typeof body?.user_id === 'number'
+            ? (body.user_id as number)
+            : undefined;
+
+      if (requiresOtp) {
+        return {
+          success: true,
+          requiresOtp: true,
+          message,
+          data: null,
+          userId,
+          email: payload.email.trim(),
+        };
+      }
+
       return { success: false, message, data: null };
     }
   }
 
   async verifyRegistrationOtp(
-    email: string,
+    userId: number,
     otp: string
   ): Promise<
     | { success: true; data: RegistrationResponseData }
@@ -250,9 +287,9 @@ class AuthService {
     if (STATIC_DATA_MODE) {
       const data: RegistrationResponseData = {
         user: {
-          id: 1,
+          id: userId || 1,
           name: 'Rydnex Driver',
-          email: email || 'driver@rydnex.local',
+          email: 'driver@rydnex.local',
           roles: [{ id: 1, role_key: 'user', role_name: 'User' }],
         },
         accessToken: 'static-mode-access-token',
@@ -263,7 +300,7 @@ class AuthService {
     try {
       const res = await skaftinClient.post<Record<string, unknown>>(
         routes.auth.verifyOtp,
-        { email: email.trim(), otp: otp.trim() },
+        { user_id: userId, otp: otp.trim() },
         { skipUserAuthorization: true }
       );
 
@@ -287,6 +324,31 @@ class AuthService {
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Verification failed';
       return { success: false, message };
+    }
+  }
+
+  async resendRegistrationOtp(
+    userId: number
+  ): Promise<{ success: true; message?: string } | { success: false; message?: string; error?: string }> {
+    if (STATIC_DATA_MODE) {
+      return { success: true, message: 'A new code has been sent.' };
+    }
+
+    try {
+      const res = await skaftinClient.post<Record<string, unknown>>(
+        routes.auth.resendOtp,
+        { user_id: userId },
+        { skipUserAuthorization: true }
+      );
+      if (!res.success) {
+        return { success: false, message: res.message, error: res.error };
+      }
+      return { success: true, message: res.message };
+    } catch (e: unknown) {
+      return {
+        success: false,
+        message: e instanceof Error ? e.message : 'Failed to resend verification code',
+      };
     }
   }
 

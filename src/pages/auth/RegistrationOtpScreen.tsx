@@ -21,11 +21,11 @@ import Animated, {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONT_FAMILY } from '@/constants/Fonts';
+import { authService } from '@/backend';
 import { AuthStore, ToastStateStore } from '@/stores/StoresIndex';
-import type { RegistrationResponseData } from '@/types/Types';
 
 type RouteParams = {
-  data: RegistrationResponseData;
+  userId: number;
   email: string;
 };
 
@@ -35,7 +35,7 @@ const RESEND_SECONDS = 60;
 const RegistrationOtpScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute();
-  const { data, email } = route.params as RouteParams;
+  const { userId, email } = route.params as RouteParams;
 
   const { setAuthFromRegistration } = AuthStore();
   const { showToast } = ToastStateStore();
@@ -105,6 +105,10 @@ const RegistrationOtpScreen = () => {
   };
 
   const onVerify = async () => {
+    if (!userId) {
+      showToast({ message: 'Missing verification context. Please register again.', type: 'error' });
+      return;
+    }
     const code = digits.join('');
     if (code.length < OTP_LENGTH) {
       showToast({ message: 'Please enter the full 6-digit code.', type: 'error' });
@@ -112,9 +116,12 @@ const RegistrationOtpScreen = () => {
     }
     setLoading(true);
     try {
-      // In static mode the OTP is not verified against a server — any 6-digit
-      // code completes the registration and logs the user in.
-      setAuthFromRegistration(data);
+      const result = await authService.verifyRegistrationOtp(userId, code);
+      if (!result.success) {
+        showToast({ message: result.message ?? result.error ?? 'Verification failed.', type: 'error' });
+        return;
+      }
+      setAuthFromRegistration(result.data);
       showToast({ message: 'Account verified. Welcome to rydnex!', type: 'success' });
     } catch (error: any) {
       showToast({ message: error?.message ?? 'Verification failed.', type: 'error' });
@@ -123,12 +130,26 @@ const RegistrationOtpScreen = () => {
     }
   };
 
-  const onResend = () => {
+  const onResend = async () => {
+    if (!userId) {
+      showToast({ message: 'Unable to resend code. Please register again.', type: 'error' });
+      return;
+    }
     if (countdown > 0) return;
-    setCountdown(RESEND_SECONDS);
-    setDigits(Array(OTP_LENGTH).fill(''));
-    inputRefs.current[0]?.focus();
-    showToast({ message: 'A new code has been sent.', type: 'success' });
+    setLoading(true);
+    try {
+      const result = await authService.resendRegistrationOtp(userId);
+      if (!result.success) {
+        showToast({ message: result.message ?? result.error ?? 'Failed to resend code.', type: 'error' });
+        return;
+      }
+      setCountdown(RESEND_SECONDS);
+      setDigits(Array(OTP_LENGTH).fill(''));
+      inputRefs.current[0]?.focus();
+      showToast({ message: result.message ?? 'A new code has been sent.', type: 'success' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const maskedEmail = email
