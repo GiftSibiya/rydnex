@@ -14,8 +14,8 @@ import {
   View,
 } from "react-native";
 import FuelLevelGauge from "@/components/elements/FuelLevelGauge";
-import GoldButton from "@/components/elements/GoldButton";
-import LuxInput from "@/components/elements/LuxInput";
+import GoldButton from "@/components/buttons/GoldButton";
+import LuxInput from "@/components/forms/LuxInput";
 import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
 

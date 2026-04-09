@@ -10,9 +10,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import GoldButton from "@/components/elements/GoldButton";
+import GoldButton from "@/components/buttons/GoldButton";
 import LuxCard from "@/components/elements/LuxCard";
-import LuxInput from "@/components/elements/LuxInput";
+import LuxInput from "@/components/forms/LuxInput";
 import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
 
@@ -211,7 +211,7 @@ export default function LicenseDiskScreen() {
             label="Register Number"
             placeholder="e.g. CA 123456"
             value={form.registerNumber}
-            onChangeText={(t) => setForm((f) => ({ ...f, registerNumber: t }))}
+            onChangeText={(t) => setForm((f) => ({ ...f, registerNumber: t.toUpperCase() }))}
             autoCapitalize="characters"
             error={errors.registerNumber}
           />

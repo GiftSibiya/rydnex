@@ -24,12 +24,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userName = user?.name ?? null;
 
   useEffect(() => {
-    if (AuthStore.persist.hasHydrated()) {
+    async function initSession() {
+      const token = AuthStore.getState().accessToken;
+      if (token) {
+        const result = await authService.refreshSession();
+        if (result.expired) {
+          await AuthStore.getState().logout();
+        }
+      }
       setIsLoading(false);
+    }
+
+    if (AuthStore.persist.hasHydrated()) {
+      initSession();
       return;
     }
     const unsubscribe = AuthStore.persist.onFinishHydration(() => {
-      setIsLoading(false);
+      initSession();
     });
     return () => unsubscribe();
   }, []);

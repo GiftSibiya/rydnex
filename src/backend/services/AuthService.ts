@@ -349,6 +349,24 @@ class AuthService {
     }
   }
 
+  async refreshSession(): Promise<{ success: boolean; expired: boolean }> {
+    if (STATIC_DATA_MODE) {
+      return { success: true, expired: false };
+    }
+
+    try {
+      const res = await skaftinClient.post<Record<string, unknown>>(routes.auth.sessionRefresh, {});
+      return { success: res.success, expired: false };
+    } catch (e: unknown) {
+      const status = (e as any)?.status;
+      if (status === 401) {
+        return { success: false, expired: true };
+      }
+      // Network error or server error — don't treat as expired
+      return { success: false, expired: false };
+    }
+  }
+
   async logout(): Promise<ApiResponseType<null>> {
     if (STATIC_DATA_MODE) {
       return { success: true, data: null };

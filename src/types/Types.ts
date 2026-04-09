@@ -40,7 +40,8 @@ export type Vehicle = {
   id: number;
   user_id: number;
   vin: string;
-  registration_number: string;
+  /** Licence plate; matches DB column `registration`. */
+  registration: string;
   make: string;
   model: string;
   year?: number;

@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CheckItem from "@/components/items/CheckItem";
 import LuxCard from "@/components/elements/LuxCard";
 import MetricCard from "@/components/elements/MetricCard";
-import SectionHeader from "@/components/elements/SectionHeader";
+import SectionHeader from "@/components/layouts/SectionHeader";
 import Colors from "@/constants/colors";
 import { getCarLogo } from "@/constants/carLogos";
 import { useVehicle } from "@/contexts/VehicleContext";

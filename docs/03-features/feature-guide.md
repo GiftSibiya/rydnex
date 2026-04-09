@@ -11,11 +11,12 @@
 
 ## Dashboard (Home)
 
-- File: `src/app/(tabs)/index.tsx`
-- Shows active vehicle overview, efficiency summary, quick logging actions
-- Highlights overdue parts rules and links to reminders
-- Includes recent service/fuel activity cards
-- Vehicle carousel card CTA opens `/vehicle-details`
+- File: `src/app/(tabs)/index.tsx`, screen: `src/pages/home/HomeScreen.tsx`
+- Fixed header (greeting + vehicle count + garage shortcut) sits above a scrollable content area
+- Vehicle carousel uses `VehicleSummaryItem` (`src/components/items/VehicleSummaryItem.tsx`) with `variant="full"` — shows status badge, odometer/registration/year stats, next service, license disk, and health checks
+- Alert banners appear below the header for the active vehicle when license disk is expired/expiring or parts are overdue; link to `/log/license-disk` and `/reminders`
+- Quick Log grid at the bottom shortcuts to fuel, service, odometer, and license disk logging routes
+- Status constants (`STATUS_COLOR`, `STATUS_BG`, `STATUS_LABEL`) and shared helpers (`getDiskDaysLeft`, `getNextService`, `getStatusLevel`) live in `VehicleSummaryItem` and `src/constants/Constants.ts`
 
 ## Garage
 

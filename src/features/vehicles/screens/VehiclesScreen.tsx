@@ -15,7 +15,7 @@ import useVehicleStore from "@/features/vehicles/store/useVehicleStore";
 import ScreenScaffold from "@/shared/ui/ScreenScaffold";
 import { AuthStore, ToastStateStore } from "@/stores/StoresIndex";
 import { useAppTheme } from "@/themes/AppTheme";
-import VehiclePickerModal from "@/components/elements/VehiclePickerModal";
+import VehiclePickerModal from "@/components/modals/VehiclePickerModal";
 
 const C = Colors.dark;
 
@@ -57,7 +57,7 @@ const VehiclesScreen = () => {
         year: year ?? undefined,
         trim,
         vin,
-        registration_number: registrationNumber,
+        registration: registrationNumber.trim().toUpperCase(),
         is_active: true,
       });
       showToast({ message: "Vehicle added to your logbook.", type: "success" });
@@ -169,7 +169,7 @@ const VehiclesScreen = () => {
         {/* Registration */}
         <TextInput
           value={registrationNumber}
-          onChangeText={setRegistrationNumber}
+          onChangeText={(t) => setRegistrationNumber(t.toUpperCase())}
           style={[styles.input, { borderColor: colors.border, color: colors.text }]}
           placeholder="Registration number"
           placeholderTextColor={colors.textMuted}
@@ -239,7 +239,7 @@ const VehiclesScreen = () => {
                   </Text>
                 ) : null}
                 <Text style={[styles.vehicleReg, { color: colors.textMuted }]}>
-                  {item.registration_number}
+                  {item.registration}
                 </Text>
               </View>
               {isActive && (

@@ -9,6 +9,8 @@ Two model sets are present:
 
 When adding fields, update the model set used by the target flow instead of mixing schemas.
 
+Skaftin-backed vehicle rows use the column **`registration`** (licence plate). Repository/fixture types use the same name; avoid `registration_number` for new code.
+
 ## Static Fixtures
 
 Seed files in `src/fixtures/*.json` include:

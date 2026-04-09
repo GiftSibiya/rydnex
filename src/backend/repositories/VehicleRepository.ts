@@ -39,6 +39,7 @@ export const vehicleRepository = {
   async createVehicle(data: Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>) {
     const created: Vehicle = {
       ...data,
+      registration: String(data.registration ?? '').trim().toUpperCase(),
       id: getNextId(staticDataStore.vehicles),
       created_at: nowIso(),
       updated_at: nowIso(),

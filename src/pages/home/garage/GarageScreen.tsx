@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -12,11 +13,12 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import GoldButton from "@/components/elements/GoldButton";
+import GoldButton from "@/components/buttons/GoldButton";
 import LuxCard from "@/components/elements/LuxCard";
-import LuxInput from "@/components/elements/LuxInput";
-import VehiclePickerModal from "@/components/elements/VehiclePickerModal";
+import LuxInput from "@/components/forms/LuxInput";
+import VehiclePickerModal from "@/components/modals/VehiclePickerModal";
 import Colors from "@/constants/colors";
+import { getCarLogo } from "@/constants/carLogos";
 import { Vehicle, useVehicle, LicenseDisk } from "@/contexts/VehicleContext";
 
 const C = Colors.dark;
@@ -47,7 +49,7 @@ export default function GarageScreen() {
     vin: "",
     registration: "",
     color: "",
-    currentOdometer: "0",
+    currentOdometer: "",
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -76,7 +78,7 @@ export default function GarageScreen() {
       trim: form.trim.trim(),
       vin: form.vin.trim(),
       registration: form.registration.trim().toUpperCase(),
-      color: form.color.trim(),
+      color: form.color.trim().toUpperCase(),
       currentOdometer: Number(form.currentOdometer) || 0,
     });
     setLoading(false);
@@ -93,7 +95,7 @@ export default function GarageScreen() {
       vin: "",
       registration: "",
       color: "",
-      currentOdometer: "0",
+      currentOdometer: "",
     });
     setErrors({});
   };
@@ -160,7 +162,11 @@ export default function GarageScreen() {
               <LuxCard style={styles.vehicleCard}>
                 <View style={styles.vehicleHeader}>
                   <View style={styles.vehicleIcon}>
-                    <Feather name="truck" size={22} color={C.tint} />
+                    {getCarLogo(v.make) ? (
+                      <Image source={getCarLogo(v.make)!} style={styles.vehicleLogoImg} resizeMode="contain" />
+                    ) : (
+                      <Feather name="truck" size={22} color={C.tint} />
+                    )}
                   </View>
                   <View style={styles.vehicleInfo}>
                     <Text style={styles.vehicleName}>
@@ -319,7 +325,7 @@ export default function GarageScreen() {
               label="Registration"
               placeholder="e.g. CA123456"
               value={form.registration}
-              onChangeText={(t) => setForm((f) => ({ ...f, registration: t }))}
+              onChangeText={(t) => setForm((f) => ({ ...f, registration: t.toUpperCase() }))}
               autoCapitalize="characters"
               error={errors.registration}
             />
@@ -332,16 +338,18 @@ export default function GarageScreen() {
             />
             <LuxInput
               label="Color (optional)"
-              placeholder="e.g. Pearl White"
+              placeholder="e.g. PEARL WHITE"
               value={form.color}
-              onChangeText={(t) => setForm((f) => ({ ...f, color: t }))}
-              autoCapitalize="words"
+              onChangeText={(t) => setForm((f) => ({ ...f, color: t.toUpperCase() }))}
+              autoCapitalize="characters"
             />
             <LuxInput
               label="Current Odometer (km)"
-              placeholder="0"
+              placeholder="Optional — defaults to 0"
               value={form.currentOdometer}
-              onChangeText={(t) => setForm((f) => ({ ...f, currentOdometer: t }))}
+              onChangeText={(t) =>
+                setForm((f) => ({ ...f, currentOdometer: t.replace(/\D/g, "") }))
+              }
               keyboardType="numeric"
             />
           </View>
@@ -427,6 +435,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(46,204,113,0.2)",
   },
+  vehicleLogoImg: { width: 30, height: 30 },
   vehicleInfo: { flex: 1 },
   vehicleName: {
     fontSize: 17,

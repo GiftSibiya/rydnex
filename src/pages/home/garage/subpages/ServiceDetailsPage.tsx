@@ -4,7 +4,7 @@ import React from "react";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LuxCard from "@/components/elements/LuxCard";
-import SectionHeader from "@/components/elements/SectionHeader";
+import SectionHeader from "@/components/layouts/SectionHeader";
 import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
 

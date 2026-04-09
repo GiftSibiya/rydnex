@@ -1,4 +1,5 @@
-import poppinsRegular from '@assets/fonts/poppins/Poppins-Regular.ttf';
+/** Metro resolves font assets from project root (see expo-font / useFonts). */
+const poppinsRegular = require('../../assets/fonts/poppins/Poppins-Regular.ttf');
 
 export const COLORS = {
   primary: "#281C59",
@@ -148,3 +149,24 @@ export const FURNISHED_OPTIONS = [
   'Fully Furnished',
   'Partly Furnished',
 ];
+
+export const STATUS_COLOR: Record<string, string> = {
+  good: "#2ECC71",
+  warn: "#F39C12",
+  danger: "#E74C3C",
+  unknown: "#5C7265",
+};
+
+export const STATUS_BG = {
+  good: "rgba(46,204,113,0.12)",
+  warn: "rgba(243,156,18,0.12)",
+  danger: "rgba(231,76,60,0.12)",
+  unknown: "rgba(92,114,101,0.12)",
+};
+
+export const STATUS_LABEL = {
+  good: "All Good",
+  warn: "Attention",
+  danger: "Action Required",
+  unknown: "No Data",
+};

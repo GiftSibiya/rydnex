@@ -161,7 +161,9 @@ class SkaftinClient {
     if (this.refreshing) return false;
     this.refreshing = true;
     try {
-      const refreshUrl = `${this.config.apiUrl}/app-api/auth/session/refresh`;
+      // Lazy-import to avoid circular deps (routes → client → routes)
+      const { default: routes } = await import('@/constants/ApiRoutes');
+      const refreshUrl = `${this.config.apiUrl}${routes.auth.sessionRefresh}`;
       const headers = this.buildHeaders({});
       const response = await fetch(refreshUrl, { method: 'POST', headers });
       return response.ok;
