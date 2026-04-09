@@ -84,7 +84,7 @@ export default function index() {
             checks={checks}
             onPress={() => {
               setActiveVehicle(item);
-              router.push("/vehicle-details");
+              router.push("/garage/vehicle-details-page");
             }}
           />
         </View>

@@ -131,7 +131,7 @@ export default function ProfileScreen() {
         </LuxCard>
       </View>
 
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <Text style={styles.sectionLabel}>Coming Soon</Text>
         <LuxCard noPad>
           <ComingSoonItem
@@ -164,7 +164,7 @@ export default function ProfileScreen() {
             description="Track unlimited vehicles with advanced fleet analytics"
           />
         </LuxCard>
-      </View>
+      </View> */}
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>App</Text>

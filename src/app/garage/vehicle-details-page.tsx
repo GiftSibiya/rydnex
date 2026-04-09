@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
+  Alert,
   Image,
   Platform,
   ScrollView,
@@ -21,7 +22,7 @@ import { useVehicle } from "@/contexts/VehicleContext";
 
 const C = Colors.dark;
 
-export default function VehicleDetailsPage() {
+export default function vehicleDetailsPage() {
   const {
     activeVehicle,
     lastChecks,
@@ -31,6 +32,7 @@ export default function VehicleDetailsPage() {
     fuelLogs,
     partRules,
     licenseDisk,
+    deleteVehicle,
   } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -65,22 +67,44 @@ export default function VehicleDetailsPage() {
     updateLastCheck(activeVehicle.id, field, new Date().toISOString());
   };
 
+  const handleEdit = () => {
+    router.push("/garage/vehicle-edit-page");
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete vehicle",
+      `Remove ${activeVehicle.year} ${activeVehicle.make} ${activeVehicle.model}? This cannot be undone. All logs and data for this vehicle will be deleted.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteVehicle(activeVehicle.id);
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={[styles.content, { paddingTop: topPad + 8, paddingBottom: bottomPad + 100 }]}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
+      {/* Back */}
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Feather name="arrow-left" size={20} color={C.text} />
         </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+        <View style={styles.headerTitleWrap}>
+          <Text style={styles.headerTitle}>Vehicle Details</Text>
+          <Text style={styles.headerSub} numberOfLines={1}>
             {activeVehicle.year} {activeVehicle.make} {activeVehicle.model}
           </Text>
-          <Text style={styles.headerSub}>{activeVehicle.registration || "No registration"}</Text>
         </View>
         {getCarLogo(activeVehicle.make) ? (
           <View style={styles.logoWrap}>
@@ -88,6 +112,8 @@ export default function VehicleDetailsPage() {
           </View>
         ) : null}
       </View>
+
+      
 
       {/* Overdue alert */}
       {overdueRules.length > 0 && (
@@ -260,6 +286,18 @@ export default function VehicleDetailsPage() {
           )}
         </LuxCard>
       )}
+
+<View style={styles.manageRow}>
+        <TouchableOpacity style={styles.editBtn} onPress={handleEdit} activeOpacity={0.75}>
+          <Feather name="edit-2" size={16} color={C.tint} />
+          <Text style={styles.editBtnText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.75}>
+          <Feather name="trash-2" size={16} color={C.danger} />
+          <Text style={styles.deleteBtnText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+      
     </ScrollView>
   );
 }
@@ -270,7 +308,13 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 10,
   },
   backBtn: {
     width: 38,
@@ -283,12 +327,12 @@ const styles = StyleSheet.create({
     borderColor: C.surfaceBorder,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
     color: C.text,
   },
   headerSub: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: C.textMuted,
     marginTop: 1,
@@ -303,6 +347,37 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   logo: { width: 30, height: 30 },
+  manageRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+  },
+  editBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(46,204,113,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(46,204,113,0.22)",
+  },
+  editBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.tint },
+  deleteBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(231,76,60,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(231,76,60,0.22)",
+  },
+  deleteBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.danger },
   alertBanner: {
     flexDirection: "row",
     alignItems: "center",

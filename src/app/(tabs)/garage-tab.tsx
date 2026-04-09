@@ -156,7 +156,7 @@ export default function garageTab() {
               activeOpacity={0.85}
               onPress={() => {
                 setActiveVehicle(v);
-                router.push("/vehicle-details");
+                router.push("/garage/vehicle-details-page");
               }}
             >
               <LuxCard style={styles.vehicleCard}>
