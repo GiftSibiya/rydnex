@@ -1,1 +1,1 @@
-export { default } from "@/pages/home/garage/GarageScreen";
+export { default } from "./garage-tab";

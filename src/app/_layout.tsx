@@ -62,7 +62,9 @@ function RootLayoutNav() {
       <Stack.Screen name="log/fuel" options={{ title: "Fuel Log", presentation: "modal" }} />
       <Stack.Screen name="log/service" options={{ title: "Service / Repair", presentation: "modal" }} />
       <Stack.Screen name="log/odometer" options={{ title: "Odometer", presentation: "modal" }} />
-      <Stack.Screen name="account/edit" options={{ title: "Edit Account", presentation: "modal" }} />
+      <Stack.Screen name="log/subpages/logbook-item-page" options={{ headerShown: false }} />
+      <Stack.Screen name="log/subpages/logbook-item-edit-page" options={{ headerShown: false }} />
+      <Stack.Screen name="account/editAccountScreen" options={{ title: "Edit Account", presentation: "modal" }} />
     </Stack>
   );
 }

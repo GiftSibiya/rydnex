@@ -62,7 +62,7 @@ export default function ProfileScreen() {
           await logout();
           router.replace("/");
           setTimeout(() => {
-            router.replace("/login");
+            router.replace("/auth/login-screen");
           }, 900);
         },
       },
@@ -90,7 +90,7 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <TouchableOpacity
               style={styles.editBtn}
-              onPress={() => router.push("/account/edit")}
+              onPress={() => router.push("/account/editAccountScreen")}
               activeOpacity={0.75}
             >
               <Feather name="edit-2" size={13} color={C.tint} />

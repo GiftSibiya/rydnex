@@ -124,7 +124,7 @@ export default function SplashScreen() {
       >
         <TouchableOpacity
           style={styles.loginBtn}
-          onPress={() => router.push("/login")}
+          onPress={() => router.push("/auth/login-screen")}
           activeOpacity={0.85}
         >
           <LinearGradient

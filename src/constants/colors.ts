@@ -8,7 +8,7 @@ export default {
     textMuted: "#8A9E91",
     textSubtle: "#5C7265",
     background: "#0B0B0B",
-    surface: "#0E1410",
+    surface: "#242424",
     surfaceElevated: "#161E18",
     surfaceBorder: "#1E2C22",
     tint: GREEN,

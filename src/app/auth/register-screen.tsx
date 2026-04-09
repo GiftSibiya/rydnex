@@ -19,7 +19,7 @@ import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
 
 const C = Colors.dark;
 
-export default function RegisterScreen() {
+export default function registerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
@@ -88,7 +88,7 @@ export default function RegisterScreen() {
 
       if ("requiresOtp" in response && response.requiresOtp && response.userId) {
         router.push({
-          pathname: "/register-otp",
+          pathname: "/auth/register-otp-screen",
           params: {
             name: trimmedName,
             userId: String(response.userId),
@@ -106,7 +106,7 @@ export default function RegisterScreen() {
           return;
         }
         router.push({
-          pathname: "/register-otp",
+          pathname: "/auth/register-otp-screen",
           params: {
             name: trimmedName,
             userId: String(userId),

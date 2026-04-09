@@ -1,9 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   FlatList,
   Platform,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
 import { FuelLog, OdometerLog, ServiceLog, useVehicle } from "@/contexts/VehicleContext";
+import LogBookItem from "@/components/items/LogBookItem";
 
 const C = Colors.dark;
 
@@ -23,10 +25,17 @@ type LogItem =
 const FILTERS = ["All", "Service", "Fuel", "Odometer"] as const;
 
 export default function LogbookScreen() {
-  const { activeVehicle, serviceLogs, fuelLogs, odometerLogs, deleteServiceLog, deleteFuelLog } = useVehicle();
+  const { activeVehicle, serviceLogs, fuelLogs, odometerLogs, deleteServiceLog, deleteFuelLog, refreshLogs } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshLogs();
+    setRefreshing(false);
+  }, [refreshLogs]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -57,91 +66,54 @@ export default function LogbookScreen() {
     );
   }, [activeVehicle, serviceLogs, fuelLogs, odometerLogs, filter]);
 
-  const renderItem = ({ item }: { item: LogItem }) => {
+  const navigateToItem = (item: LogItem) => {
     if (item._type === "service") {
-      return (
-        <View style={styles.entry}>
-          <View
-            style={[
-              styles.entryLine,
-              { backgroundColor: item.type === "repair" ? C.danger : C.tint },
-            ]}
-          />
-          <View
-            style={[
-              styles.entryIcon,
-              { backgroundColor: item.type === "repair" ? "rgba(231,76,60,0.12)" : "rgba(46,204,113,0.1)" },
-            ]}
-          >
-            <Feather
-              name="tool"
-              size={14}
-              color={item.type === "repair" ? C.danger : C.tint}
-            />
-          </View>
-          <View style={styles.entryContent}>
-            <View style={styles.entryHeader}>
-              <Text style={styles.entryTitle}>{item.description}</Text>
-              <Text style={styles.entryAmount}>R{item.cost.toLocaleString()}</Text>
-            </View>
-            <Text style={styles.entryMeta}>
-              {new Date(item.date).toLocaleDateString("en-ZA")} •{" "}
-              {item.odometer.toLocaleString()} km{item.workshop ? ` • ${item.workshop}` : ""}
-            </Text>
-            {item.notes ? <Text style={styles.entryNote}>{item.notes}</Text> : null}
-          </View>
-          <TouchableOpacity onPress={() => deleteServiceLog(item.id)} style={styles.delBtn} activeOpacity={0.7}>
-            <Feather name="trash-2" size={13} color={C.textSubtle} />
-          </TouchableOpacity>
-        </View>
-      );
+      router.push({
+        pathname: "/log/subpages/logbook-item-page",
+        params: {
+          _type: "service",
+          id: item.id,
+          date: item.date,
+          type: item.type,
+          description: item.description,
+          cost: String(item.cost),
+          odometer: String(item.odometer),
+          ...(item.workshop ? { workshop: item.workshop } : {}),
+          ...(item.notes ? { notes: item.notes } : {}),
+        },
+      });
+    } else if (item._type === "fuel") {
+      router.push({
+        pathname: "/log/subpages/logbook-item-page",
+        params: {
+          _type: "fuel",
+          id: item.id,
+          date: item.date,
+          liters: String(item.liters),
+          costPerLiter: String(item.costPerLiter),
+          totalCost: String(item.totalCost),
+          odometer: String(item.odometer),
+          fullTank: String(item.fullTank),
+        },
+      });
+    } else {
+      router.push({
+        pathname: "/log/subpages/logbook-item-page",
+        params: {
+          _type: "odometer",
+          id: item.id,
+          date: item.date,
+          reading: String(item.reading),
+          ...(item.note ? { note: item.note } : {}),
+        },
+      });
     }
+  };
 
-    if (item._type === "fuel") {
-      return (
-        <View style={styles.entry}>
-          <View style={[styles.entryLine, { backgroundColor: C.info }]} />
-          <View style={[styles.entryIcon, { backgroundColor: "rgba(52,152,219,0.12)" }]}>
-            <Feather name="droplet" size={14} color={C.info} />
-          </View>
-          <View style={styles.entryContent}>
-            <View style={styles.entryHeader}>
-              <Text style={styles.entryTitle}>
-                {item.liters}L @ R{item.costPerLiter.toFixed(2)}/L{item.fullTank ? " ✓" : ""}
-              </Text>
-              <Text style={styles.entryAmount}>R{item.totalCost.toFixed(0)}</Text>
-            </View>
-            <Text style={styles.entryMeta}>
-              {new Date(item.date).toLocaleDateString("en-ZA")} •{" "}
-              {item.odometer.toLocaleString()} km
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => deleteFuelLog(item.id)} style={styles.delBtn} activeOpacity={0.7}>
-            <Feather name="trash-2" size={13} color={C.textSubtle} />
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.entry}>
-        <View style={[styles.entryLine, { backgroundColor: C.success }]} />
-        <View style={[styles.entryIcon, { backgroundColor: "rgba(46,204,113,0.1)" }]}>
-          <Feather name="activity" size={14} color={C.success} />
-        </View>
-        <View style={styles.entryContent}>
-          <View style={styles.entryHeader}>
-            <Text style={styles.entryTitle}>
-              Odometer: {item.reading.toLocaleString()} km
-            </Text>
-          </View>
-          <Text style={styles.entryMeta}>
-            {new Date(item.date).toLocaleDateString("en-ZA")}
-            {item.note ? ` • ${item.note}` : ""}
-          </Text>
-        </View>
-      </View>
-    );
+  const getDeleteHandler = (item: LogItem) => {
+    if (item._type === "service") return () => deleteServiceLog(item.id);
+    if (item._type === "fuel") return () => deleteFuelLog(item.id);
+    return undefined;
   };
 
   if (!activeVehicle) {
@@ -216,9 +188,18 @@ export default function LogbookScreen() {
         <FlatList
           data={items}
           keyExtractor={(item) => `${item._type}-${item.id}`}
-          renderItem={renderItem}
+          renderItem={({ item }) => (
+            <LogBookItem
+              item={item}
+              onPress={() => navigateToItem(item)}
+              onDelete={getDeleteHandler(item)}
+            />
+          )}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad + 100 }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.tint} />
+          }
         />
       )}
     </View>
@@ -281,60 +262,5 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
   emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center" },
   list: { paddingHorizontal: 20, paddingTop: 8 },
-  entry: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: C.separator,
-  },
-  entryLine: {
-    width: 2,
-    alignSelf: "stretch",
-    borderRadius: 1,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  entryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  entryContent: { flex: 1 },
-  entryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  entryTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: C.text,
-  },
-  entryAmount: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: C.tint,
-  },
-  entryMeta: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-    marginTop: 3,
-  },
-  entryNote: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: C.textSubtle,
-    marginTop: 3,
-    fontStyle: "italic",
-  },
-  delBtn: { padding: 6, marginTop: 4 },
 });
 

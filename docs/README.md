@@ -16,6 +16,8 @@ This folder contains project documentation for the Rydnex Expo app.
   Feature-by-feature behavior and user flows.
 - `04-data/data-and-storage.md`  
   Data models, static fixtures, and persistence notes.
+- `03-database/service-logs.md`  
+  Service log schema (`service_logs`) and item links (`service_logs_items`).
 
 ## Current Status Note
 

@@ -52,6 +52,18 @@ Service checklist catalog references:
 
 - App source: `SERVICE_ITEM_CATALOG` in `src/constants/Constants.ts`
 - DB mirror table: `service_items` (see `docs/03-database/service-items.md`)
+- Service log item links: `service_logs_items` (join table between `service_logs` and `service_items`)
+- App source: `REPAIR_ITEM_CATALOG` in `src/constants/Constants.ts`
+- DB mirror table: `repair_items` (see `docs/03-database/repair-items.md`)
+- Repair log item links: `repair_logs_items` (join table between `repair_logs` and `repair_items`)
+
+Service log persistence note:
+
+- `service_logs.description` stores the saved human-readable summary text.
+- Item-level service history is derived from `service_logs_items` links (not by parsing description).
+- Legacy `service_type` rows were migrated to `description` without auto-generated item links.
+- `repair_logs.repair_type` stores the saved human-readable summary text.
+- Item-level repair history is derived from `repair_logs_items` links (not by parsing `repair_type`).
 
 ## Session (auth)
 

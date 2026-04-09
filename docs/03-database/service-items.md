@@ -24,4 +24,6 @@ See [`routes.reference.serviceItems`](../../src/constants/ApiRoutes.ts).
 
 ## Service log UI
 
-[`ServiceLogScreen`](../../src/pages/home/log/service.tsx) composes ticked item **names** plus optional free text into `service_logs.service_type` via `buildServiceDescriptionFromSelection`.
+[`ServiceLogScreen`](../../src/pages/home/log/service.tsx) composes ticked item names plus optional free text into `service_logs.description` via `buildServiceDescriptionFromSelection`.
+
+Selected checklist items are also persisted in `service_logs_items` (`service_log_id` + `service_item_id`) so item-based lookups (for example "last time oil filter was serviced") do not need to parse description text.

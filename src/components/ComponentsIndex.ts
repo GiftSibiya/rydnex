@@ -13,6 +13,7 @@ export { default as LuxCard } from './elements/LuxCard';
 export { default as LuxInput } from './forms/LuxInput';
 export { default as FuelLevelGauge } from './elements/FuelLevelGauge';
 export { default as VehicleSummaryItem } from './items/VehicleSummaryItem';
+export { default as LogBookItem } from './items/LogBookItem';
 
 // ---------- BUTTONS ---------- //
 export { default as GoldButton } from './buttons/GoldButton';

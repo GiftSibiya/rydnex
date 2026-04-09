@@ -74,7 +74,7 @@ export type FuelLog = {
 export type ServiceLog = {
   id: number;
   vehicle_id: number;
-  service_type: string;
+  description: string;
   service_km: number;
   service_date: string;
   workshop_name?: string;

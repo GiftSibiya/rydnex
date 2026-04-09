@@ -48,6 +48,15 @@ export type ServiceLog = {
   workshop?: string;
   notes?: string;
 };
+type AddServiceLogInput = Omit<ServiceLog, "id"> & {
+  selectedServiceItemSlugs?: string[];
+  selectedRepairItemSlugs?: string[];
+};
+
+type UpdateServiceLogInput = Partial<Pick<ServiceLog, "description" | "cost" | "odometer" | "workshop" | "notes" | "date">> & {
+  selectedServiceItemSlugs?: string[];
+  selectedRepairItemSlugs?: string[];
+};
 
 export type LastCheck = {
   vehicleId: string;
@@ -95,15 +104,20 @@ type VehicleContextType = {
   deleteVehicle: (id: string) => Promise<void>;
   addOdometerLog: (log: Omit<OdometerLog, "id">) => Promise<void>;
   addFuelLog: (log: Omit<FuelLog, "id">) => Promise<void>;
-  addServiceLog: (log: Omit<ServiceLog, "id">) => Promise<void>;
+  addServiceLog: (log: AddServiceLogInput) => Promise<void>;
   deleteServiceLog: (id: string) => Promise<void>;
+  updateServiceLog: (id: string, data: UpdateServiceLogInput) => Promise<void>;
+  getLatestServiceLogForItem: (vehicleId: string, itemSlug: string) => Promise<ServiceLog | null>;
   deleteFuelLog: (id: string) => Promise<void>;
+  updateFuelLog: (id: string, data: Partial<Pick<FuelLog, "liters" | "costPerLiter" | "totalCost" | "odometer" | "date" | "fullTank">>) => Promise<void>;
+  updateOdometerLog: (id: string, data: Partial<Pick<OdometerLog, "reading" | "date" | "note">>) => Promise<void>;
   updateLastCheck: (vehicleId: string, field: keyof Omit<LastCheck, "vehicleId">, date: string) => Promise<void>;
   addPartRule: (rule: Omit<PartRule, "id">) => Promise<void>;
   updatePartRule: (id: string, data: Partial<PartRule>) => Promise<void>;
   deletePartRule: (id: string) => Promise<void>;
   upsertLicenseDisk: (disk: LicenseDisk) => Promise<void>;
   getEfficiencyMetrics: (vehicleId: string) => { avgKmPerL: number; avgCostPerKm: number; totalFuelCost: number };
+  refreshLogs: () => Promise<void>;
   FREE_TIER_LIMIT: number;
 };
 
@@ -230,7 +244,8 @@ function rowToServiceLog(row: Record<string, any>, kind: "service" | "repair"): 
     vehicleId: String(row.vehicle_id),
     date,
     type: kind === "service" ? "service" : "repair",
-    description: kind === "service" ? (row.service_type ?? "") : (row.repair_type ?? ""),
+    description:
+      kind === "service" ? (row.description ?? row.service_type ?? "") : (row.repair_type ?? ""),
     cost: Number(row.cost ?? 0),
     odometer: Number(kind === "service" ? row.service_km : row.repair_km),
     workshop: row.workshop_name ?? undefined,
@@ -410,6 +425,39 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  const refreshLogs = useCallback(async () => {
+    const vidNums = vehicles.map((v) => Number(v.id)).filter(Boolean);
+    if (vidNums.length === 0) return;
+    try {
+      const [odoRows, fuelRows, svcRows, repRows] = await Promise.all([
+        fetchRowsForVehicles(routes.maintenance.odometerLogs.list, vidNums),
+        fetchRowsForVehicles(routes.maintenance.fuelLogs.list, vidNums),
+        fetchRowsForVehicles(routes.maintenance.serviceLogs.list, vidNums),
+        fetchRowsForVehicles(routes.maintenance.repairLogs.list, vidNums),
+      ]);
+      const nextOdo = odoRows.map(rowToOdometerLog).sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      const nextFuel = fuelRows.map(rowToFuelLog).sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      const nextSvc = [
+        ...svcRows.map((r) => rowToServiceLog(r, "service")),
+        ...repRows.map((r) => rowToServiceLog(r, "repair")),
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setOdometerLogs(nextOdo);
+      setFuelLogs(nextFuel);
+      setServiceLogs(nextSvc);
+      await Promise.all([
+        save(STORAGE_KEYS.odometerLogs, nextOdo),
+        save(STORAGE_KEYS.fuelLogs, nextFuel),
+        save(STORAGE_KEYS.serviceLogs, nextSvc),
+      ]);
+    } catch {
+      /* keep existing data on failure */
+    }
+  }, [vehicles]);
+
   const setActiveVehicle = useCallback((v: Vehicle) => {
     setActiveVehicleState(v);
     save(STORAGE_KEYS.activeVehicleId, v.id);
@@ -478,7 +526,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         if (data.currentOdometer !== undefined) dbPatch.current_odometer = data.currentOdometer;
         if (Object.keys(dbPatch).length > 0) {
           dbPatch.updated_at = new Date().toISOString();
-          await skaftinClient.post(routes.vehicles.update, {
+          await skaftinClient.put(routes.vehicles.update, {
             where: { id: parseInt(id, 10) },
             data: dbPatch,
           });
@@ -500,7 +548,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         await save(STORAGE_KEYS.activeVehicleId, next?.id ?? null);
       }
       try {
-        await skaftinClient.post(routes.vehicles.delete, {
+        await skaftinClient.delete(routes.vehicles.delete, {
           where: { id: parseInt(id, 10) },
         });
       } catch {
@@ -587,7 +635,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addServiceLog = useCallback(
-    async (log: Omit<ServiceLog, "id">) => {
+    async (log: AddServiceLogInput) => {
       const vid = parseInt(log.vehicleId, 10);
       let newLog: ServiceLog = { ...log, id: generateId() };
       try {
@@ -603,13 +651,47 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
             },
           });
           if (res.success && res.data) {
-            newLog = rowToServiceLog(res.data as Record<string, any>, "repair");
+            const parsed = rowToServiceLog(res.data as Record<string, any>, "repair");
+            newLog = { ...parsed, description: log.description };
+            const newRepairLogId = Number((res.data as Record<string, any>).id);
+            const selected = (log.selectedRepairItemSlugs ?? []).filter(Boolean);
+            if (!Number.isNaN(newRepairLogId) && selected.length > 0) {
+              const slugRows = await Promise.all(
+                selected.map(async (slug) => {
+                  try {
+                    const itemRes = await skaftinClient.post<Record<string, any>[]>(
+                      routes.reference.repairItems.list,
+                      { where: { slug } }
+                    );
+                    return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
+                  } catch {
+                    return null;
+                  }
+                })
+              );
+              const itemIds = [...new Set(
+                slugRows
+                  .map((row) => (row && row.id != null ? Number(row.id) : NaN))
+                  .filter((id) => !Number.isNaN(id))
+              )];
+              if (itemIds.length > 0) {
+                await Promise.all(
+                  itemIds.map((repair_item_id) =>
+                    skaftinClient
+                      .post(routes.maintenance.repairLogItems.create, {
+                        data: { repair_log_id: newRepairLogId, repair_item_id },
+                      })
+                      .catch(() => null)
+                  )
+                );
+              }
+            }
           }
         } else {
           const res = await skaftinClient.post<Record<string, any>>(routes.maintenance.serviceLogs.create, {
             data: {
               vehicle_id: vid,
-              service_type: log.description,
+              description: log.description,
               service_km: log.odometer,
               service_date: log.date || new Date().toISOString(),
               workshop_name: log.workshop ?? null,
@@ -618,7 +700,41 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
             },
           });
           if (res.success && res.data) {
-            newLog = rowToServiceLog(res.data as Record<string, any>, "service");
+            const parsed = rowToServiceLog(res.data as Record<string, any>, "service");
+            newLog = { ...parsed, description: log.description };
+            const newServiceLogId = Number((res.data as Record<string, any>).id);
+            const selected = (log.selectedServiceItemSlugs ?? []).filter(Boolean);
+            if (!Number.isNaN(newServiceLogId) && selected.length > 0) {
+              const slugRows = await Promise.all(
+                selected.map(async (slug) => {
+                  try {
+                    const itemRes = await skaftinClient.post<Record<string, any>[]>(
+                      routes.reference.serviceItems.list,
+                      { where: { slug } }
+                    );
+                    return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
+                  } catch {
+                    return null;
+                  }
+                })
+              );
+              const itemIds = [...new Set(
+                slugRows
+                  .map((row) => (row && row.id != null ? Number(row.id) : NaN))
+                  .filter((id) => !Number.isNaN(id))
+              )];
+              if (itemIds.length > 0) {
+                await Promise.all(
+                  itemIds.map((service_item_id) =>
+                    skaftinClient
+                      .post(routes.maintenance.serviceLogItems.create, {
+                        data: { service_log_id: newServiceLogId, service_item_id },
+                      })
+                      .catch(() => null)
+                  )
+                );
+              }
+            }
           }
         }
       } catch {
@@ -639,9 +755,9 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       if (!Number.isNaN(numericId)) {
         try {
           if (isRepair) {
-            await skaftinClient.post(routes.maintenance.repairLogs.delete, { where: { id: numericId } });
+            await skaftinClient.delete(routes.maintenance.repairLogs.delete, { where: { id: numericId } });
           } else if (isService) {
-            await skaftinClient.post(routes.maintenance.serviceLogs.delete, { where: { id: numericId } });
+            await skaftinClient.delete(routes.maintenance.serviceLogs.delete, { where: { id: numericId } });
           }
         } catch {
           /* still drop locally */
@@ -654,12 +770,233 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
     [serviceLogs]
   );
 
+  const updateServiceLog = useCallback(
+    async (id: string, data: UpdateServiceLogInput) => {
+      const {
+        selectedServiceItemSlugs,
+        selectedRepairItemSlugs,
+        ...rowPatch
+      } = data;
+      const isRepair = id.startsWith("r-");
+      const isService = id.startsWith("s-");
+      const numericId = isRepair || isService ? parseInt(id.slice(2), 10) : NaN;
+      if (!Number.isNaN(numericId)) {
+        try {
+          if (isRepair) {
+            await skaftinClient.put(routes.maintenance.repairLogs.update, {
+              data: {
+                ...(rowPatch.description !== undefined && { repair_type: rowPatch.description }),
+                ...(rowPatch.odometer !== undefined && { repair_km: rowPatch.odometer }),
+                ...(rowPatch.date !== undefined && { repair_date: rowPatch.date }),
+                ...(rowPatch.cost !== undefined && { cost: rowPatch.cost }),
+                ...(rowPatch.notes !== undefined && { notes: rowPatch.notes ?? null }),
+              },
+              where: { id: numericId },
+            });
+            if (selectedRepairItemSlugs !== undefined) {
+              try {
+                await skaftinClient.delete(routes.maintenance.repairLogItems.delete, {
+                  where: { repair_log_id: numericId },
+                });
+              } catch {
+                /* still try inserts */
+              }
+              const selected = selectedRepairItemSlugs.filter(Boolean);
+              if (selected.length > 0) {
+                const slugRows = await Promise.all(
+                  selected.map(async (slug) => {
+                    try {
+                      const itemRes = await skaftinClient.post<Record<string, any>[]>(
+                        routes.reference.repairItems.list,
+                        { where: { slug } }
+                      );
+                      return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
+                    } catch {
+                      return null;
+                    }
+                  })
+                );
+                const itemIds = [...new Set(
+                  slugRows
+                    .map((row) => (row && row.id != null ? Number(row.id) : NaN))
+                    .filter((x) => !Number.isNaN(x))
+                )];
+                await Promise.all(
+                  itemIds.map((repair_item_id) =>
+                    skaftinClient
+                      .post(routes.maintenance.repairLogItems.create, {
+                        data: { repair_log_id: numericId, repair_item_id },
+                      })
+                      .catch(() => null)
+                  )
+                );
+              }
+            }
+          } else if (isService) {
+            await skaftinClient.put(routes.maintenance.serviceLogs.update, {
+              data: {
+                ...(rowPatch.description !== undefined && { description: rowPatch.description }),
+                ...(rowPatch.odometer !== undefined && { service_km: rowPatch.odometer }),
+                ...(rowPatch.date !== undefined && { service_date: rowPatch.date }),
+                ...(rowPatch.cost !== undefined && { cost: rowPatch.cost }),
+                ...(rowPatch.workshop !== undefined && { workshop_name: rowPatch.workshop ?? null }),
+                ...(rowPatch.notes !== undefined && { notes: rowPatch.notes ?? null }),
+              },
+              where: { id: numericId },
+            });
+            if (selectedServiceItemSlugs !== undefined) {
+              try {
+                await skaftinClient.delete(routes.maintenance.serviceLogItems.delete, {
+                  where: { service_log_id: numericId },
+                });
+              } catch {
+                /* still try inserts */
+              }
+              const selected = selectedServiceItemSlugs.filter(Boolean);
+              if (selected.length > 0) {
+                const slugRows = await Promise.all(
+                  selected.map(async (slug) => {
+                    try {
+                      const itemRes = await skaftinClient.post<Record<string, any>[]>(
+                        routes.reference.serviceItems.list,
+                        { where: { slug } }
+                      );
+                      return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
+                    } catch {
+                      return null;
+                    }
+                  })
+                );
+                const itemIds = [...new Set(
+                  slugRows
+                    .map((row) => (row && row.id != null ? Number(row.id) : NaN))
+                    .filter((x) => !Number.isNaN(x))
+                )];
+                await Promise.all(
+                  itemIds.map((service_item_id) =>
+                    skaftinClient
+                      .post(routes.maintenance.serviceLogItems.create, {
+                        data: { service_log_id: numericId, service_item_id },
+                      })
+                      .catch(() => null)
+                  )
+                );
+              }
+            }
+          }
+        } catch {
+          /* update locally anyway */
+        }
+      }
+      const updated = serviceLogs.map((l) => (l.id === id ? { ...l, ...rowPatch } : l));
+      setServiceLogs(updated);
+      await save(STORAGE_KEYS.serviceLogs, updated);
+    },
+    [serviceLogs]
+  );
+
+  const updateFuelLog = useCallback(
+    async (id: string, data: Partial<Pick<FuelLog, "liters" | "costPerLiter" | "totalCost" | "odometer" | "date" | "fullTank">>) => {
+      const numericId = parseInt(id, 10);
+      if (!Number.isNaN(numericId)) {
+        try {
+          await skaftinClient.put(routes.maintenance.fuelLogs.update, {
+            data: {
+              ...(data.liters !== undefined && { litres: data.liters }),
+              ...(data.totalCost !== undefined && { cost: data.totalCost }),
+              ...(data.odometer !== undefined && { odometer_km: data.odometer }),
+              ...(data.fullTank !== undefined && { fuel_level_percent: data.fullTank ? 100 : null }),
+              ...(data.date !== undefined && { logged_at: data.date }),
+            },
+            where: { id: numericId },
+          });
+        } catch {
+          /* update locally anyway */
+        }
+      }
+      const updated = fuelLogs.map((l) => (l.id === id ? { ...l, ...data } : l));
+      setFuelLogs(updated);
+      await save(STORAGE_KEYS.fuelLogs, updated);
+    },
+    [fuelLogs]
+  );
+
+  const updateOdometerLog = useCallback(
+    async (id: string, data: Partial<Pick<OdometerLog, "reading" | "date" | "note">>) => {
+      const numericId = parseInt(id, 10);
+      if (!Number.isNaN(numericId)) {
+        try {
+          await skaftinClient.put(routes.maintenance.odometerLogs.update, {
+            data: {
+              ...(data.reading !== undefined && { reading_km: data.reading }),
+              ...(data.date !== undefined && { logged_at: data.date }),
+              ...(data.note !== undefined && { note: data.note ?? null }),
+            },
+            where: { id: numericId },
+          });
+        } catch {
+          /* update locally anyway */
+        }
+      }
+      const updated = odometerLogs.map((l) => (l.id === id ? { ...l, ...data } : l));
+      setOdometerLogs(updated);
+      await save(STORAGE_KEYS.odometerLogs, updated);
+    },
+    [odometerLogs]
+  );
+
+  const getLatestServiceLogForItem = useCallback(
+    async (vehicleId: string, itemSlug: string): Promise<ServiceLog | null> => {
+      const vid = parseInt(vehicleId, 10);
+      if (Number.isNaN(vid) || !itemSlug.trim()) return null;
+      try {
+        const itemRes = await skaftinClient.post<Record<string, any>[]>(
+          routes.reference.serviceItems.list,
+          { where: { slug: itemSlug.trim() } }
+        );
+        const itemRow = Array.isArray(itemRes.data) ? itemRes.data[0] : null;
+        const itemId = itemRow?.id != null ? Number(itemRow.id) : NaN;
+        if (Number.isNaN(itemId)) return null;
+
+        const linksRes = await skaftinClient.post<Record<string, any>[]>(
+          routes.maintenance.serviceLogItems.list,
+          { where: { service_item_id: itemId } }
+        );
+        const links = Array.isArray(linksRes.data) ? linksRes.data : [];
+        if (links.length === 0) return null;
+
+        const rows = await Promise.all(
+          links.map(async (link) => {
+            try {
+              const logRes = await skaftinClient.post<Record<string, any>[]>(
+                routes.maintenance.serviceLogs.list,
+                { where: { id: Number(link.service_log_id), vehicle_id: vid } }
+              );
+              return Array.isArray(logRes.data) && logRes.data.length > 0 ? logRes.data[0] : null;
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        const mapped = rows
+          .filter((row): row is Record<string, any> => row != null)
+          .map((row) => rowToServiceLog(row, "service"))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return mapped[0] ?? null;
+      } catch {
+        return null;
+      }
+    },
+    []
+  );
+
   const deleteFuelLog = useCallback(
     async (id: string) => {
       const numericId = parseInt(id, 10);
       if (!Number.isNaN(numericId)) {
         try {
-          await skaftinClient.post(routes.maintenance.fuelLogs.delete, { where: { id: numericId } });
+          await skaftinClient.delete(routes.maintenance.fuelLogs.delete, { where: { id: numericId } });
         } catch {
           /* local */
         }
@@ -760,7 +1097,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       }
       if (Object.keys(dbPatch).length === 0) return;
       try {
-        await skaftinClient.post(routes.maintenance.partsLifeRules.update, {
+        await skaftinClient.put(routes.maintenance.partsLifeRules.update, {
           where: { id: numericId },
           data: dbPatch,
         });
@@ -779,7 +1116,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       const numericId = parseInt(id, 10);
       if (Number.isNaN(numericId)) return;
       try {
-        await skaftinClient.post(routes.maintenance.partsLifeRules.delete, { where: { id: numericId } });
+        await skaftinClient.delete(routes.maintenance.partsLifeRules.delete, { where: { id: numericId } });
       } catch {
         /* local */
       }
@@ -813,7 +1150,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       if (diskNorm.vin) data.vin = diskNorm.vin;
       if (regUpper) data.registration = regUpper;
       try {
-        await skaftinClient.post(routes.vehicles.update, {
+        await skaftinClient.put(routes.vehicles.update, {
           where: { id: parseInt(diskNorm.vehicleId, 10) },
           data,
         });
@@ -900,7 +1237,11 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         addFuelLog,
         addServiceLog,
         deleteServiceLog,
+        updateServiceLog,
+        getLatestServiceLogForItem,
         deleteFuelLog,
+        updateFuelLog,
+        updateOdometerLog,
         updateLastCheck,
         addPartRule,
         updatePartRule,
@@ -908,6 +1249,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         upsertLicenseDisk,
         licenseDisk,
         getEfficiencyMetrics,
+        refreshLogs,
         FREE_TIER_LIMIT,
       }}
     >

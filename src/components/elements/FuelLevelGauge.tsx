@@ -69,6 +69,8 @@ export default function FuelLevelGauge({
 
   const fillPercent = useSharedValue(safePercent);
   const isDragging = useRef(false);
+  const tankRef = useRef<View>(null);
+  const tankPageY = useRef<number>(0);
 
   useEffect(() => {
     if (isDragging.current) return;
@@ -88,19 +90,33 @@ export default function FuelLevelGauge({
     return { top };
   });
 
-  const panResponder = useMemo(
+  const HANDLE_HIT_SLOP = 40; // px above/below the drag line that count as a grab
+
+  const handlePanResponder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => !!onPercentageChange,
-        onMoveShouldSetPanResponder: () => !!onPercentageChange,
+        onStartShouldSetPanResponder: (evt) => {
+          if (!onPercentageChange) return false;
+          // drag line top = tankHeight - fillH - 3
+          const fillH = (fillPercent.value / 100) * tankHeight;
+          const lineTop = clamp(tankHeight - fillH - 3, 0, tankHeight - 6);
+          const touchY = evt.nativeEvent.locationY;
+          return Math.abs(touchY - lineTop) <= HANDLE_HIT_SLOP;
+        },
+        onMoveShouldSetPanResponder: () => isDragging.current,
         onPanResponderGrant: (evt) => {
           isDragging.current = true;
-          const pct = clamp((1 - evt.nativeEvent.locationY / tankHeight) * 100, 0, 100);
+          tankRef.current?.measure((_x, _y, _w, _h, _px, py) => {
+            tankPageY.current = py;
+          });
+          const localY = evt.nativeEvent.pageY - tankPageY.current;
+          const pct = clamp((1 - localY / tankHeight) * 100, 0, 100);
           fillPercent.value = pct;
           onPercentageChange?.(pct);
         },
         onPanResponderMove: (evt) => {
-          const pct = clamp((1 - evt.nativeEvent.locationY / tankHeight) * 100, 0, 100);
+          const localY = evt.nativeEvent.pageY - tankPageY.current;
+          const pct = clamp((1 - localY / tankHeight) * 100, 0, 100);
           fillPercent.value = pct;
           onPercentageChange?.(pct);
         },
@@ -125,8 +141,9 @@ export default function FuelLevelGauge({
         </View>
 
         <View
+          ref={tankRef}
           style={[styles.tank, { height: tankHeight }]}
-          {...(onPercentageChange ? panResponder.panHandlers : {})}
+          {...(onPercentageChange ? handlePanResponder.panHandlers : {})}
         >
           <Animated.View style={[styles.fill, fillStyle]} />
           {onPercentageChange && (
@@ -214,13 +231,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    height: 6,
+    height: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   dragHandle: {
-    width: "80%",
-    height: 3,
+    width: "85%",
+    height: 5,
     borderRadius: 999,
     backgroundColor: "#fff",
     opacity: 0.9,

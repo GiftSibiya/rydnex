@@ -47,8 +47,9 @@
 - Route export: `src/app/log/service.tsx`
 - Primary implementation: `src/pages/home/log/service.tsx`
 - In `service` mode, grouped checkboxes are rendered from `SERVICE_ITEM_CATALOG` in `src/constants/Constants.ts`
-- Checked item labels plus optional typed description are merged and saved into `service_logs.service_type`
-- In `repair` mode, the checklist is hidden and description remains free-form
+- Checked item labels plus optional typed description are merged and saved into `service_logs.description`
+- Selected checklist items are also stored in `service_logs_items` for direct item-based history queries
+- In `repair` mode, grouped checkboxes are rendered from `REPAIR_ITEM_CATALOG`; selected items are saved into `repair_logs_items` for item-based repair history queries
 - The reference table `service_items` is documented in `docs/03-database/service-items.md`; current app source of truth stays constants
 
 ## Logbook

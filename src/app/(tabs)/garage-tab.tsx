@@ -35,7 +35,7 @@ function isLicenseDiskExpiringSoon(disk: LicenseDisk): boolean {
   return diff >= 0 && diff <= 30;
 }
 
-export default function GarageScreen() {
+export default function garageTab() {
   const { vehicles, addVehicle, deleteVehicle, setActiveVehicle, FREE_TIER_LIMIT, licenseDisk } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();

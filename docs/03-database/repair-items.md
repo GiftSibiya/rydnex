@@ -23,6 +23,7 @@ See [`routes.reference.repairItems`](../../src/constants/ApiRoutes.ts).
 ## Repair log UI
 
 [`ServiceLogScreen`](../../src/pages/home/log/service.tsx) (repair tab) composes ticked item **names** plus optional free text into `repair_logs.repair_type` via `buildRepairDescriptionFromSelection`.
+Selected repair checklist items are also persisted in `repair_logs_items` (`repair_log_id` + `repair_item_id`) so item-based repair lookups do not need to parse summary text.
 
 ## Categories
 

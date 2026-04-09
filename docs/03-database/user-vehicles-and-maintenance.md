@@ -60,8 +60,37 @@ All use `vehicle_id` → `vehicles.id`.
 
 Service and repair are separate tables; the app maps them into a single UI list with ids prefixed `s-` / `r-`.
 
-- **service_logs**: `service_type`, `service_km`, `service_date`, `workshop_name`, `cost`, `notes`
+- **service_logs**: `description`, `service_km`, `service_date`, `workshop_name`, `cost`, `notes`
 - **repair_logs**: `repair_type`, `repair_km`, `repair_date`, `cost`, `notes`
+- Detailed service schema and join-table usage: [`service-logs.md`](./service-logs.md)
+
+### `service_logs_items`
+
+Join table from service log entries to service catalog items.
+
+| Column | Type |
+|--------|------|
+| `id` | serial PK |
+| `service_log_id` | integer FK -> `service_logs.id` |
+| `service_item_id` | integer FK -> `service_items.id` |
+| `created_at` | timestamptz NOT NULL default `now()` |
+
+Constraint: unique pair on (`service_log_id`, `service_item_id`).
+
+Migration note: legacy `service_logs.service_type` text was backfilled into `service_logs.description`; existing rows are not auto-linked in `service_logs_items`.
+
+### `repair_logs_items`
+
+Join table from repair log entries to repair catalog items.
+
+| Column | Type |
+|--------|------|
+| `id` | serial PK |
+| `repair_log_id` | integer FK -> `repair_logs.id` |
+| `repair_item_id` | integer FK -> `repair_items.id` |
+| `created_at` | timestamptz NOT NULL default `now()` |
+
+Constraint: unique pair on (`repair_log_id`, `repair_item_id`).
 
 ### `vehicle_checks`
 

@@ -1,1 +1,1 @@
-export { default } from "@/pages/home/garage/subpages/VehicleDetailsPage";
+export { default } from "@/app/garage/VehicleDetailsPage";

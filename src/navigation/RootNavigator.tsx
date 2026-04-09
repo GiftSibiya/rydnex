@@ -7,11 +7,11 @@ import { useAppTheme } from '@/themes/AppTheme';
 import { AuthStore } from '@/stores/StoresIndex';
 
 // Auth Screens
-import SplashScreen from '@/pages/auth/SplashScreen';
-import LoginScreen from '@/pages/auth/LoginScreen';
-import RegistrationScreen from '@/pages/auth/RegistrationScreen';
-import RegistrationOtpScreen from '@/pages/auth/RegistrationOtpScreen';
-import ForgotPasswordScreen from '@/pages/auth/ForgotPasswordScreen';
+import SplashScreen from '@/app/auth/SplashScreen';
+import LoginScreen from '@/app/auth/login-screen';
+import RegistrationScreen from '@/app/auth/register-screen';
+import RegistrationOtpScreen from '@/app/auth/register-otp-screen';
+import ForgotPasswordScreen from '@/app/auth/forgot-password-otp-screen';
 
 //
 import DashboardScreen from '@/features/home/screens/DashboardScreen';

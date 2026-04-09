@@ -16,7 +16,7 @@ const LogbookScreen = () => {
         id: `s-${item.id}`,
         type: 'Service',
         date: item.service_date,
-        details: `${item.service_type} at ${item.service_km} km`,
+        details: `${item.description} at ${item.service_km} km`,
       })),
       ...repairLogs.map((item) => ({
         id: `r-${item.id}`,

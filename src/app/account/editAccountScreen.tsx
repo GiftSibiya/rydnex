@@ -57,7 +57,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType = "defaul
   );
 }
 
-export default function EditAccountScreen() {
+export default function editAccountScreen() {
   const { userEmail, userName, updateAccount } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();

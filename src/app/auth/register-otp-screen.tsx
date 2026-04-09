@@ -23,7 +23,7 @@ const C = Colors.dark;
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
-export default function RegisterOtpScreen() {
+export default function registerOtpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { setAuthFromRegistration } = AuthStore();

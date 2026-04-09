@@ -11,7 +11,7 @@ const MaintenanceScreen = () => {
   const { showToast } = ToastStateStore();
   const { activeVehicleId, addOdometerLog, addServiceLog, addRepairLog, addCheck } = useVehicleStore();
   const [odometer, setOdometer] = useState('');
-  const [serviceType, setServiceType] = useState('Oil Service');
+  const [serviceDescription, setServiceDescription] = useState('Oil Service');
   const [repairType, setRepairType] = useState('General Repair');
 
   const vehicleId = activeVehicleId ?? 0;
@@ -28,7 +28,7 @@ const MaintenanceScreen = () => {
       await addOdometerLog({ vehicle_id: vehicleId, reading_km: safeNumber(odometer), logged_at: now });
       await addServiceLog({
         vehicle_id: vehicleId,
-        service_type: serviceType,
+        description: serviceDescription,
         service_km: safeNumber(odometer),
         service_date: now,
       });
@@ -49,7 +49,7 @@ const MaintenanceScreen = () => {
     <ScreenScaffold title="Maintenance" subtitle="Log odometer, service, repairs, and checks">
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <TextInput value={odometer} onChangeText={setOdometer} keyboardType="numeric" placeholder="Odometer km" placeholderTextColor={colors.textMuted} style={[styles.input, { color: colors.text, borderColor: colors.border }]} />
-        <TextInput value={serviceType} onChangeText={setServiceType} placeholder="Service type" placeholderTextColor={colors.textMuted} style={[styles.input, { color: colors.text, borderColor: colors.border }]} />
+        <TextInput value={serviceDescription} onChangeText={setServiceDescription} placeholder="Service description" placeholderTextColor={colors.textMuted} style={[styles.input, { color: colors.text, borderColor: colors.border }]} />
         <TextInput value={repairType} onChangeText={setRepairType} placeholder="Repair type" placeholderTextColor={colors.textMuted} style={[styles.input, { color: colors.text, borderColor: colors.border }]} />
         <Pressable style={[styles.button, { backgroundColor: colors.primary }]} onPress={onSaveLogs}>
           <Text style={styles.buttonText}>Save maintenance log</Text>

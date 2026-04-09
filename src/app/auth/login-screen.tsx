@@ -19,7 +19,7 @@ import AppButton from "@/components/buttons/AppButton";
 
 const C = Colors.dark;
 
-export default function LoginScreen() {
+export default function loginScreen() {
   const { login } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -154,7 +154,7 @@ export default function LoginScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Don't have an account? </Text>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => router.push("/register")}>
+        <TouchableOpacity activeOpacity={0.7} onPress={() => router.push("/auth/register-screen")}>
           <Text style={styles.footerLink}>Create one</Text>
         </TouchableOpacity>
       </View>

@@ -2,7 +2,7 @@
   {
     "id": 1,
     "vehicle_id": 1,
-    "service_type": "Major Service",
+    "description": "Major Service",
     "service_km": 56000,
     "service_date": "2026-02-25T10:00:00.000Z",
     "workshop_name": "Prestige Motors",
