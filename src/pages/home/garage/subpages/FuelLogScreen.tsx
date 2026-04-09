@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -18,6 +18,7 @@ import GoldButton from "@/components/buttons/GoldButton";
 import LuxInput from "@/components/forms/LuxInput";
 import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
+import useFuelPricesStore, { selectDefaultCostPerLiter } from "@/stores/data/FuelPricesStore";
 
 const C = Colors.dark;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -26,7 +27,15 @@ const parseNumericText = (value: string) => Number(value.replace(/,/g, "."));
 
 export default function FuelLogScreen() {
   const { activeVehicle, addFuelLog } = useVehicle();
+  const defaultCostPerLiter = useFuelPricesStore(selectDefaultCostPerLiter);
+  const syncFuelPrices = useFuelPricesStore((s) => s.sync);
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      void syncFuelPrices();
+    }, [syncFuelPrices])
+  );
   const [form, setForm] = useState({
     liters: "",
     costPerLiter: "",
@@ -49,6 +58,14 @@ export default function FuelLogScreen() {
       useNativeDriver: false,
     }).start();
   }, [animatedFillWidth, fuelPercent]);
+
+  useEffect(() => {
+    if (defaultCostPerLiter == null) return;
+    setForm((f) => {
+      if (f.costPerLiter !== "") return f;
+      return { ...f, costPerLiter: defaultCostPerLiter.toFixed(2) };
+    });
+  }, [defaultCostPerLiter]);
 
   const totalCost = (Number(form.liters) || 0) * (Number(form.costPerLiter) || 0);
   const totalRangeNumber = useMemo(

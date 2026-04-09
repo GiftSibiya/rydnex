@@ -95,6 +95,10 @@ Table CRUD uses Skaftin paths:
 
 See [`src/constants/ApiRoutes.ts`](../../src/constants/ApiRoutes.ts).
 
+Reference data for default fuel cost hints: [`fuel-prices.md`](./fuel-prices.md) (`fuel_prices` table, `routes.reference.fuelPrices`).
+
+Service checklist catalog (seeded reference): [`service-items.md`](./service-items.md) (`service_items`, `routes.reference.serviceItems`; UI source of truth is `SERVICE_ITEM_CATALOG` in Constants until a fetch path is added).
+
 ## Naming note
 
 The database, API, and `src/fixtures/vehicles.json` all use **`registration`** for the licence plate. Older code or copies may still say `registration_number`; treat that as the same concept with the wrong column name.

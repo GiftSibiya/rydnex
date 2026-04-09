@@ -31,6 +31,11 @@ const routes = {
     models: '/app-api/database/tables/vehicle_models_catalog/select',
     trims: '/app-api/database/tables/vehicle_trims_catalog/select',
   },
+  reference: {
+    fuelPrices: tableCrud('fuel_prices'),
+    serviceItems: tableCrud('service_items'),
+    repairItems: tableCrud('repair_items'),
+  },
   maintenance: {
     odometerLogs: tableCrud('odometer_logs'),
     fuelLogs: tableCrud('fuel_logs'),

@@ -46,6 +46,12 @@ Vehicle context persistence keys:
 - `rydnex_last_checks`
 - `rydnex_part_rules`
 - `rydnex_license_disks`
+- `rydnex_fuel_prices_cache` — last fetched inland `fuel_prices` map (see [fuel-prices.md](../03-database/fuel-prices.md))
+
+Service checklist catalog references:
+
+- App source: `SERVICE_ITEM_CATALOG` in `src/constants/Constants.ts`
+- DB mirror table: `service_items` (see `docs/03-database/service-items.md`)
 
 ## Session (auth)
 

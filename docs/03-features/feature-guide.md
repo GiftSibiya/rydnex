@@ -42,6 +42,15 @@
   - Log Service -> `/log/service?type=service`
   - Log Repair -> `/log/service?type=repair`
 
+## Service Log
+
+- Route export: `src/app/log/service.tsx`
+- Primary implementation: `src/pages/home/log/service.tsx`
+- In `service` mode, grouped checkboxes are rendered from `SERVICE_ITEM_CATALOG` in `src/constants/Constants.ts`
+- Checked item labels plus optional typed description are merged and saved into `service_logs.service_type`
+- In `repair` mode, the checklist is hidden and description remains free-form
+- The reference table `service_items` is documented in `docs/03-database/service-items.md`; current app source of truth stays constants
+
 ## Logbook
 
 - File: `src/app/(tabs)/logbook.tsx`

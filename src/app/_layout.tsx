@@ -16,6 +16,7 @@ import { Platform } from "react-native";
 
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import FuelPricesSync from "@/components/boot/FuelPricesSync";
 import { VehicleProvider } from "@/contexts/VehicleContext";
 import Colors from "@/constants/colors";
 
@@ -89,6 +90,7 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <AuthProvider>
               <VehicleProvider>
+                <FuelPricesSync />
                 {Platform.OS === "web" ? (
                   <RootLayoutNav />
                 ) : (
