@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,10 +13,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type FieldProps = {
   label: string;
@@ -30,6 +29,8 @@ type FieldProps = {
 };
 
 function Field({ label, value, onChangeText, placeholder, keyboardType = "default", secure, autoCapitalize, hint }: FieldProps) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const [hidden, setHidden] = useState(!!secure);
   return (
     <View style={styles.fieldWrap}>
@@ -58,6 +59,8 @@ function Field({ label, value, onChangeText, placeholder, keyboardType = "defaul
 }
 
 export default function editAccountScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const { userEmail, userName, updateAccount } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -183,7 +186,7 @@ export default function editAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: C.background },
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 20, gap: 24 },

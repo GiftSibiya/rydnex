@@ -14,11 +14,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CAR_LOGOS from "@/constants/carLogos";
-import Colors from "../../constants/colors";
 import skaftinClient from "@/backend/client/SkaftinClient";
 import routes from "@/constants/ApiRoutes";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Step = "make" | "year" | "model" | "trim";
 
@@ -41,6 +40,8 @@ interface Props {
 }
 
 export default function VehiclePickerModal({ visible, onClose, onConfirm }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>("make");
   const [selectedMakeUuid, setSelectedMakeUuid] = useState("");
@@ -453,7 +454,7 @@ export default function VehiclePickerModal({ visible, onClose, onConfirm }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   sheet: {
     flex: 1,
     backgroundColor: C.surface,

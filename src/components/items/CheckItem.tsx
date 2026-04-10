@@ -1,9 +1,8 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = {
   label: string;
@@ -17,16 +16,11 @@ function daysSince(dateStr: string): number {
   return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function statusColor(days: number | null): string {
-  if (days === null) return C.danger;
-  if (days <= 14) return C.success;
-  if (days <= 30) return C.warning;
-  return C.danger;
-}
-
 export default function CheckItem({ label, lastDate, onMark }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const days = lastDate ? daysSince(lastDate) : null;
-  const color = statusColor(days);
+  const color = days === null ? C.danger : days <= 14 ? C.success : days <= 30 ? C.warning : C.danger;
   const statusText = lastDate
     ? days === 0 ? "Today" : `${days}d ago`
     : "Never checked";
@@ -46,7 +40,7 @@ export default function CheckItem({ label, lastDate, onMark }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",

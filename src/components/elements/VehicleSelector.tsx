@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -9,12 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Colors from "../../constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 export default function VehicleSelector() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const { vehicles, activeVehicle, setActiveVehicle } = useVehicle();
   const [open, setOpen] = useState(false);
 
@@ -60,7 +61,7 @@ export default function VehicleSelector() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   trigger: {
     flexDirection: "row",
     alignItems: "center",

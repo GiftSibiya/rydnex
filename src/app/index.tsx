@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Platform,
@@ -13,10 +13,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 export default function SplashScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   const insets = useSafeAreaInsets();
@@ -146,7 +148,7 @@ export default function SplashScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: C.background,

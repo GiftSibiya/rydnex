@@ -9,9 +9,8 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 const FILL_DURATION_MS = 550;
 const NUMBER_DURATION_MS = 450;
 
@@ -62,6 +61,8 @@ export default function FuelLevelGauge({
   metricsPosition = "bottom",
   showMetrics = true,
 }: FuelLevelGaugeProps) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const safePercent = useMemo(() => clamp(percentage, 0, 100), [percentage]);
   const safeTotal = useMemo(() => Math.max(0, totalRange), [totalRange]);
   const safeLeft = useMemo(() => clamp(rangeLeft, 0, safeTotal || rangeLeft), [rangeLeft, safeTotal]);
@@ -174,7 +175,7 @@ export default function FuelLevelGauge({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   wrapper: {
     gap: 14,
     alignItems: "stretch",

@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -16,14 +16,16 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authService } from "@/backend";
-import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
+import { GREEN, GREEN_DARK } from "@/constants/colors";
 import { AuthStore } from "@/stores/StoresIndex";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
 export default function registerOtpScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { setAuthFromRegistration } = AuthStore();
@@ -266,7 +268,7 @@ export default function registerOtpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   inner: {
     flex: 1,

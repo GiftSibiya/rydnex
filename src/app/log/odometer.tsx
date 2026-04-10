@@ -1,16 +1,17 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import GoldButton from "@/components/buttons/GoldButton";
 import LuxInput from "@/components/forms/LuxInput";
-import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 export default function OdometerLogScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const { activeVehicle, addOdometerLog } = useVehicle();
   const router = useRouter();
   const [form, setForm] = useState({
@@ -97,7 +98,7 @@ export default function OdometerLogScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, gap: 20 },
   iconRow: { alignItems: "center", gap: 8, paddingTop: 8 },

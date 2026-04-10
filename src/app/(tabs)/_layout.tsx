@@ -7,9 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
 
 function NativeTabLayout() {
   return (
@@ -39,6 +37,7 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
+  const { colors: C, isDark } = useAppTheme();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -60,7 +59,7 @@ function ClassicTabLayout() {
           isIOS ? (
             <BlurView
               intensity={80}
-              tint="dark"
+              tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />
           ) : (
@@ -135,6 +134,12 @@ function ClassicTabLayout() {
             ) : (
               <Feather name="user" size={20} color={color} />
             ),
+        }}
+      />
+      <Tabs.Screen
+        name="garage-tab"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

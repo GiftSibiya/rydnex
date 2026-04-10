@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -8,9 +8,8 @@ import {
   TouchableOpacity,
   TouchableOpacityProps,
 } from "react-native";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = TouchableOpacityProps & {
   label: string;
@@ -20,6 +19,8 @@ type Props = TouchableOpacityProps & {
 };
 
 export default function GoldButton({ label, variant = "primary", loading, small, onPress, style, disabled, ...rest }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const handlePress = (e: any) => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress?.(e);
@@ -51,7 +52,7 @@ export default function GoldButton({ label, variant = "primary", loading, small,
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   btn: {
     height: 52,
     borderRadius: 12,

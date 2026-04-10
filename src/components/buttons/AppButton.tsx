@@ -20,7 +20,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -30,9 +30,8 @@ import {
   TouchableOpacityProps,
   View,
 } from "react-native";
-import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
-
-const C = Colors.dark;
+import { GREEN, GREEN_DARK } from "@/constants/colors";
+import { useAppTheme } from "@/themes/AppTheme";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -84,23 +83,6 @@ const SIZE_TOKENS = {
 
 // ─── Variant tokens ──────────────────────────────────────────────────────────
 
-const VARIANT_TOKENS = {
-  primary:   { bg: GREEN,           text: "#fff",    border: "transparent", borderWidth: 0 },
-  secondary: { bg: C.surfaceElevated, text: C.text,  border: C.surfaceBorder, borderWidth: 1 },
-  ghost:     { bg: "transparent",   text: C.tint,    border: C.tint,         borderWidth: 1 },
-  danger:    { bg: C.danger,        text: "#fff",    border: "transparent",  borderWidth: 0 },
-  success:   { bg: GREEN,           text: "#fff",    border: "transparent",  borderWidth: 0 },
-  subtle:    { bg: C.surface,       text: C.textMuted, border: "transparent", borderWidth: 0 },
-} as const;
-
-// ─── Gradient config per variant ─────────────────────────────────────────────
-
-const GRADIENT_COLORS: Partial<Record<AppButtonVariant, [string, string]>> = {
-  primary: [GREEN, GREEN_DARK],
-  danger:  [C.danger, "#9B2335"],
-  success: [GREEN, GREEN_DARK],
-};
-
 // ─── Haptic helper ───────────────────────────────────────────────────────────
 
 function triggerHaptic(level: AppButtonHaptic) {
@@ -132,6 +114,21 @@ export default function AppButton({
   style,
   ...rest
 }: AppButtonProps) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(), []);
+  const VARIANT_TOKENS = {
+    primary:   { bg: GREEN,             text: "#fff",      border: "transparent", borderWidth: 0 },
+    secondary: { bg: C.surfaceElevated, text: C.text,      border: C.surfaceBorder, borderWidth: 1 },
+    ghost:     { bg: "transparent",     text: C.tint,      border: C.tint, borderWidth: 1 },
+    danger:    { bg: C.danger,          text: "#fff",      border: "transparent", borderWidth: 0 },
+    success:   { bg: GREEN,             text: "#fff",      border: "transparent", borderWidth: 0 },
+    subtle:    { bg: C.surface,         text: C.textMuted, border: "transparent", borderWidth: 0 },
+  } as const;
+  const GRADIENT_COLORS: Partial<Record<AppButtonVariant, [string, string]>> = {
+    primary: [GREEN, GREEN_DARK],
+    danger: [C.danger, "#9B2335"],
+    success: [GREEN, GREEN_DARK],
+  };
   const tok = SIZE_TOKENS[size];
   const v   = VARIANT_TOKENS[variant];
 
@@ -238,7 +235,7 @@ export default function AppButton({
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = () => StyleSheet.create({
   shell: {
     flexDirection: "row",
     alignItems: "center",

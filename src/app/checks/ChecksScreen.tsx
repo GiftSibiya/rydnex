@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Platform,
   ScrollView,
@@ -12,10 +12,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CheckItem from "@/components/items/CheckItem";
 import LuxCard from "@/components/elements/LuxCard";
-import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 const CHECK_FIELDS = [
   {
@@ -51,7 +50,9 @@ const CHECK_FIELDS = [
 ];
 
 export default function ChecksScreen() {
+  const { colors: C } = useAppTheme();
   const { activeVehicle, lastChecks, updateLastCheck } = useVehicle();
+  const styles = useMemo(() => createStyles(C), [C]);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -133,7 +134,7 @@ export default function ChecksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 20, gap: 16 },
   headerRow: {

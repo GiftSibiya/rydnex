@@ -1,9 +1,8 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = {
   icon: string;
@@ -15,11 +14,14 @@ type Props = {
   onDelete?: () => void;
 };
 
-export default function LogEntry({ icon, iconColor = C.tint, title, subtitle, right, rightSub, onDelete }: Props) {
+export default function LogEntry({ icon, iconColor, title, subtitle, right, rightSub, onDelete }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
+  const resolvedIconColor = iconColor ?? C.tint;
   return (
     <View style={styles.container}>
-      <View style={[styles.iconWrap, { backgroundColor: `${iconColor}18` }]}>
-        <Feather name={icon as any} size={16} color={iconColor} />
+      <View style={[styles.iconWrap, { backgroundColor: `${resolvedIconColor}18` }]}>
+        <Feather name={icon as any} size={16} color={resolvedIconColor} />
       </View>
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
@@ -38,7 +40,7 @@ export default function LogEntry({ icon, iconColor = C.tint, title, subtitle, ri
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",

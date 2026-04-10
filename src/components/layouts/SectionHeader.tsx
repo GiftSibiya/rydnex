@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = {
   title: string;
@@ -10,6 +9,8 @@ type Props = {
 };
 
 export default function SectionHeader({ title, action }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   return (
     <View style={styles.row}>
       <Text style={styles.title}>{title}</Text>
@@ -22,7 +23,7 @@ export default function SectionHeader({ title, action }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",

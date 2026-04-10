@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = {
   label: string;
@@ -13,6 +12,8 @@ type Props = {
 };
 
 export default function MetricCard({ label, value, unit, sub, accent }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   return (
     <View style={[styles.card, accent && styles.accent]}>
       <Text style={styles.label}>{label}</Text>
@@ -25,7 +26,7 @@ export default function MetricCard({ label, value, unit, sub, accent }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: C.card,

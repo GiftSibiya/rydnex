@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,13 +13,15 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors, { GREEN, GREEN_DARK } from "@/constants/colors";
+import { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import AppButton from "@/components/buttons/AppButton";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 export default function loginScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const { login } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -170,7 +172,7 @@ export default function loginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: {
     paddingHorizontal: 28,

@@ -1,11 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
   Image,
   Modal,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,11 +18,10 @@ import GoldButton from "@/components/buttons/GoldButton";
 import LuxCard from "@/components/elements/LuxCard";
 import LuxInput from "@/components/forms/LuxInput";
 import VehiclePickerModal from "@/components/modals/VehiclePickerModal";
-import Colors from "@/constants/colors";
 import { getCarLogo } from "@/constants/carLogos";
 import { Vehicle, useVehicle, LicenseDisk } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 const currentYear = new Date().getFullYear();
 
@@ -36,11 +36,22 @@ function isLicenseDiskExpiringSoon(disk: LicenseDisk): boolean {
 }
 
 export default function garageTab() {
-  const { vehicles, addVehicle, deleteVehicle, setActiveVehicle, FREE_TIER_LIMIT, licenseDisk } = useVehicle();
+  const { colors: C } = useAppTheme();
+  const {
+    vehicles,
+    addVehicle,
+    deleteVehicle,
+    setActiveVehicle,
+    FREE_TIER_LIMIT,
+    licenseDisk,
+    refreshLogs,
+  } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const styles = useMemo(() => createStyles(C), [C]);
   const [showAdd, setShowAdd] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [form, setForm] = useState({
     make: "",
     model: "",
@@ -56,6 +67,15 @@ export default function garageTab() {
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshLogs();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -108,12 +128,8 @@ export default function garageTab() {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: topPad }]}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={styles.screen}>
+      <View style={[styles.fixedHeader, { paddingTop: topPad + 12 }]}>
         <View style={styles.topRow}>
           <Text style={styles.pageTitle}>My Garage</Text>
           <TouchableOpacity
@@ -128,7 +144,20 @@ export default function garageTab() {
             />
           </TouchableOpacity>
         </View>
-
+      </View>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 100 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={C.tint}
+            colors={[C.tint]}
+          />
+        }
+      >
         {vehicles.length >= FREE_TIER_LIMIT && (
           <View style={styles.limitBanner}>
             <Feather name="info" size={14} color={C.warning} />
@@ -365,15 +394,20 @@ export default function garageTab() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
+  fixedHeader: {
+    backgroundColor: C.background,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: C.separator,
+  },
   content: { paddingHorizontal: 20, gap: 14 },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 4,
-    paddingTop: 12,
   },
   pageTitle: {
     fontSize: 26,

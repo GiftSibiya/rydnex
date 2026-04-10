@@ -6,6 +6,7 @@ import {
   FlatList,
   ListRenderItemInfo,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,11 +16,11 @@ import {
   ViewToken,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/colors";
 import VehicleSummaryItem, { getDiskDaysLeft } from "@/components/items/VehicleSummaryItem";
 import { Vehicle, useVehicle } from "@/contexts/VehicleContext";
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
-const C = Colors.dark;
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = SCREEN_W - 48;
 const CARD_GAP = 12;
@@ -37,6 +38,7 @@ function getGreeting(): string {
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function index() {
+  const { colors: C } = useAppTheme();
   const {
     activeVehicle,
     vehicles,
@@ -44,11 +46,14 @@ export default function index() {
     partRules,
     licenseDisk,
     setActiveVehicle,
+    refreshLogs,
   } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const flatRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const styles = React.useMemo(() => createStyles(C), [C]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -67,6 +72,15 @@ export default function index() {
       }
     }
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshLogs();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshLogs]);
 
   const renderVehicle = useCallback(
     ({ item, index }: ListRenderItemInfo<Vehicle>) => {
@@ -137,23 +151,36 @@ export default function index() {
     return (
       <View style={styles.screen}>
         {fixedHeader}
-        <View style={styles.empty}>
-          <View style={styles.emptyIcon}>
-            <Feather name="truck" size={40} color={C.tint} />
+        <ScrollView
+          contentContainerStyle={styles.emptyContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={C.tint}
+              colors={[C.tint]}
+            />
+          }
+        >
+          <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <Feather name="truck" size={40} color={C.tint} />
+            </View>
+            <Text style={styles.emptyTitle}>No Vehicles Yet</Text>
+            <Text style={styles.emptyText}>
+              Add your first vehicle to start tracking your car's history and health.
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyBtn}
+              onPress={() => router.push("/garage-tab")}
+              activeOpacity={0.8}
+            >
+              <Feather name="plus" size={16} color="#0A0A0B" />
+              <Text style={styles.emptyBtnText}>Add Vehicle</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.emptyTitle}>No Vehicles Yet</Text>
-          <Text style={styles.emptyText}>
-            Add your first vehicle to start tracking your car's history and health.
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyBtn}
-            onPress={() => router.push("/garage-tab")}
-            activeOpacity={0.8}
-          >
-            <Feather name="plus" size={16} color="#0A0A0B" />
-            <Text style={styles.emptyBtnText}>Add Vehicle</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -164,6 +191,14 @@ export default function index() {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: bottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={C.tint}
+            colors={[C.tint]}
+          />
+        }
       >
 
       {/* Alerts for active vehicle */}
@@ -287,7 +322,7 @@ export default function index() {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   fixedHeader: {
     backgroundColor: C.background,
@@ -298,6 +333,9 @@ const styles = StyleSheet.create({
   content: { gap: 20, paddingTop: 16 },
 
   // Empty
+  emptyContainer: {
+    flexGrow: 1,
+  },
   empty: {
     flex: 1,
     backgroundColor: C.background,

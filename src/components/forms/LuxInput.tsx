@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,9 +6,8 @@ import {
   TextInputProps,
   View,
 } from "react-native";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = TextInputProps & {
   label?: string;
@@ -16,6 +15,8 @@ type Props = TextInputProps & {
 };
 
 export default function LuxInput({ label, error, style, ...rest }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -29,7 +30,7 @@ export default function LuxInput({ label, error, style, ...rest }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   container: { gap: 6 },
   label: {
     fontSize: 12,

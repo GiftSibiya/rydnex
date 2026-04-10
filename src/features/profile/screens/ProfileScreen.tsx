@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Platform,
@@ -12,11 +12,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LuxCard from "@/components/elements/LuxCard";
-import Colors from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVehicle } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import ThemeStateStore, { ThemeMode } from "@/stores/state/ThemeStateStore";
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type ComingSoonItemProps = {
   icon: string;
@@ -25,6 +25,8 @@ type ComingSoonItemProps = {
 };
 
 function ComingSoonItem({ icon, title, description }: ComingSoonItemProps) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   return (
     <TouchableOpacity style={styles.comingItem} activeOpacity={0.7}>
       <View style={styles.comingIcon}>
@@ -45,12 +47,27 @@ function ComingSoonItem({ icon, title, description }: ComingSoonItemProps) {
 }
 
 export default function ProfileScreen() {
+  const { colors: C } = useAppTheme();
   const { vehicles, FREE_TIER_LIMIT } = useVehicle();
   const { logout, userEmail, userName } = useAuth();
+  const [mode, setMode] = useState<ThemeMode>(() => ThemeStateStore.getState().mode);
+  const styles = useMemo(() => createStyles(C), [C]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+  const themeOptions: Array<{ value: ThemeMode; label: string; icon: keyof typeof Feather.glyphMap }> = [
+    { value: "system", label: "System", icon: "smartphone" },
+    { value: "light", label: "Light", icon: "sun" },
+    { value: "dark", label: "Dark", icon: "moon" },
+  ];
+
+  useEffect(() => {
+    const unsubscribe = ThemeStateStore.subscribe((state) => {
+      setMode((prev) => (prev === state.mode ? prev : state.mode));
+    });
+    return unsubscribe;
+  }, []);
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -167,6 +184,34 @@ export default function ProfileScreen() {
       </View> */}
 
       <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Appearance</Text>
+        <LuxCard>
+          <View style={styles.themeRow}>
+            {themeOptions.map((option) => {
+              const active = mode === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.themeOption, active && styles.themeOptionActive]}
+                  activeOpacity={0.8}
+                  onPress={() => ThemeStateStore.getState().setMode(option.value)}
+                >
+                  <Feather
+                    name={option.icon}
+                    size={14}
+                    color={active ? C.tint : C.textMuted}
+                  />
+                  <Text style={[styles.themeOptionText, active && styles.themeOptionTextActive]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </LuxCard>
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionLabel}>App</Text>
         <LuxCard noPad>
           {([
@@ -199,7 +244,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 20, gap: 20 },
   pageTitle: { fontSize: 26, fontFamily: "Inter_700Bold", color: C.text },
@@ -319,6 +364,34 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(231,76,60,0.08)",
   },
   menuLabel: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: C.text },
+  themeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  themeOption: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.surfaceBorder,
+    backgroundColor: C.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  themeOptionActive: {
+    borderColor: C.tint,
+    backgroundColor: "rgba(46,204,113,0.14)",
+  },
+  themeOptionText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: C.textMuted,
+  },
+  themeOptionTextActive: {
+    color: C.tint,
+  },
   version: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",

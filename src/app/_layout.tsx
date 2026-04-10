@@ -18,9 +18,7 @@ import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import FuelPricesSync from "@/components/boot/FuelPricesSync";
 import { VehicleProvider } from "@/contexts/VehicleContext";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { AppThemeProvider, useAppTheme } from "@/themes/AppTheme";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +26,7 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   const { isLoggedIn } = useAuth();
+  const { colors } = useAppTheme();
   const router = useRouter();
   const mounted = useRef(false);
 
@@ -44,11 +43,11 @@ function RootLayoutNav() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: C.background },
-        headerTintColor: C.text,
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.text,
         headerTitleStyle: { fontFamily: "Inter_600SemiBold", fontSize: 16 },
         headerBackTitle: "Back",
-        contentStyle: { backgroundColor: C.background },
+        contentStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
       }}
     >
@@ -92,18 +91,20 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
-            <AuthProvider>
-              <VehicleProvider>
-                <FuelPricesSync />
-                {Platform.OS === "web" ? (
-                  <RootLayoutNav />
-                ) : (
-                  <KeyboardProvider>
+            <AppThemeProvider>
+              <AuthProvider>
+                <VehicleProvider>
+                  <FuelPricesSync />
+                  {Platform.OS === "web" ? (
                     <RootLayoutNav />
-                  </KeyboardProvider>
-                )}
-              </VehicleProvider>
-            </AuthProvider>
+                  ) : (
+                    <KeyboardProvider>
+                      <RootLayoutNav />
+                    </KeyboardProvider>
+                  )}
+                </VehicleProvider>
+              </AuthProvider>
+            </AppThemeProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
       </ErrorBoundary>

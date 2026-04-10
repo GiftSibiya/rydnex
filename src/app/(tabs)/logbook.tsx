@@ -11,11 +11,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/colors";
 import { FuelLog, OdometerLog, ServiceLog, useVehicle } from "@/contexts/VehicleContext";
 import LogBookItem from "@/components/items/LogBookItem";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type LogItem =
   | (ServiceLog & { _type: "service" })
@@ -25,9 +24,11 @@ type LogItem =
 const FILTERS = ["All", "Service", "Fuel", "Odometer"] as const;
 
 export default function LogbookScreen() {
+  const { colors: C } = useAppTheme();
   const { activeVehicle, serviceLogs, fuelLogs, odometerLogs, deleteServiceLog, deleteFuelLog, refreshLogs } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const styles = useMemo(() => createStyles(C), [C]);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -206,7 +207,7 @@ export default function LogbookScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   center: { flex: 1, backgroundColor: C.background, alignItems: "center", justifyContent: "center" },
   noVehicle: { fontSize: 16, fontFamily: "Inter_400Regular", color: C.textMuted },

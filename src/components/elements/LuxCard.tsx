@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, View, ViewProps } from "react-native";
-import Colors from "@/constants/colors";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = ViewProps & {
   elevated?: boolean;
@@ -10,6 +9,8 @@ type Props = ViewProps & {
 };
 
 export default function LuxCard({ children, style, elevated, noPad, ...rest }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   return (
     <View
       style={[
@@ -25,7 +26,7 @@ export default function LuxCard({ children, style, elevated, noPad, ...rest }: P
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: C.card,
     borderRadius: 16,

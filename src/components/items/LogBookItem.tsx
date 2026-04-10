@@ -1,13 +1,13 @@
 import { Feather } from "@expo/vector-icons";
+import React, { useMemo } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Colors from "@/constants/colors";
 import {
   FuelLog,
   OdometerLog,
   ServiceLog,
 } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type LogItem =
   | (ServiceLog & { _type: "service" })
@@ -21,6 +21,8 @@ type Props = {
 };
 
 export default function LogBookItem({ item, onPress, onDelete }: Props) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const confirmDelete = () => {
     if (!onDelete) return;
     Alert.alert("Delete entry", "Are you sure you want to delete this log entry?", [
@@ -127,7 +129,7 @@ export default function LogBookItem({ item, onPress, onDelete }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   entry: {
     flexDirection: "row",
     alignItems: "flex-start",

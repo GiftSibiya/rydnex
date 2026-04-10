@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useMemo } from 'react';
-import { ColorSchemeName, useColorScheme } from 'react-native';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { Appearance, ColorSchemeName } from 'react-native';
 import { Theme } from '@react-navigation/native';
 import { AppThemeColors, getAppColors, getNavigationTheme, LIGHT_COLORS } from '@/themes/theme';
+import ThemeStateStore, { resolveThemeScheme } from '@/stores/state/ThemeStateStore';
 
 interface AppThemeContextValue {
   colorScheme: 'light' | 'dark';
@@ -22,8 +23,30 @@ const normalizeColorScheme = (scheme: ColorSchemeName): 'light' | 'dark' => {
 };
 
 export const AppThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const deviceColorScheme = useColorScheme();
-  const colorScheme = normalizeColorScheme(deviceColorScheme);
+  const [mode, setMode] = useState(() => ThemeStateStore.getState().mode);
+  const [deviceColorScheme, setDeviceColorScheme] = useState<'light' | 'dark'>(
+    () => normalizeColorScheme(Appearance.getColorScheme())
+  );
+
+  useEffect(() => {
+    const unsubscribe = ThemeStateStore.subscribe((state) => {
+      setMode((prev) => (prev === state.mode ? prev : state.mode));
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      const nextScheme = normalizeColorScheme(colorScheme);
+      setDeviceColorScheme((prev) => (prev === nextScheme ? prev : nextScheme));
+    });
+    return () => subscription.remove();
+  }, []);
+
+  const colorScheme = useMemo(
+    () => resolveThemeScheme(mode, deviceColorScheme),
+    [mode, deviceColorScheme]
+  );
 
   const value = useMemo<AppThemeContextValue>(() => {
     const colors = getAppColors(colorScheme);

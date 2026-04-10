@@ -7,3 +7,4 @@ export type { FuelPricesStoreState } from './data/FuelPricesStore';
 export { default as ToastStateStore } from './state/ToastStateStore';
 export { default as BottomTabStateStore } from './state/BottomTabStateStore';
 export { default as PopUpStateStore } from './state/PopUpStateStore';
+export { default as ThemeStateStore, resolveThemeScheme } from './state/ThemeStateStore';

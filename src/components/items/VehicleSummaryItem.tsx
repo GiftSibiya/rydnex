@@ -1,12 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Colors from "@/constants/colors";
 import { getCarLogo } from "@/constants/carLogos";
 import { STATUS_BG, STATUS_COLOR, STATUS_LABEL } from "@/constants/Constants";
 import { LastCheck, LicenseDisk, PartRule, Vehicle } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 const CHECK_FIELDS = ["oil", "tyrePressure", "coolant", "spareWheel", "lights"] as const;
 
@@ -74,6 +73,8 @@ export default function VehicleSummaryItem({
   onPress,
   variant = "full",
 }: VehicleSummaryItemProps) {
+  const { colors: C } = useAppTheme();
+  const styles = React.useMemo(() => createStyles(C), [C]);
   const status = getStatusLevel(v, disk, rules, checks);
   const statusColor = STATUS_COLOR[status];
   const statusBg = STATUS_BG[status];
@@ -260,7 +261,7 @@ export default function VehicleSummaryItem({
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   // Card base
   card: {
     backgroundColor: C.card,
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
   },
   cardActive: {
     borderColor: "rgba(46,204,113,0.35)",
-    backgroundColor: "#0E1610",
+    backgroundColor: C.surfaceElevated,
   },
   cardSmall: {
     borderRadius: 16,

@@ -1,10 +1,9 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Colors from "@/constants/colors";
 import { PartRule, Vehicle } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type Props = {
   rule: PartRule;
@@ -13,7 +12,7 @@ type Props = {
   onDelete: () => void;
 };
 
-function urgencyLevel(rule: PartRule, vehicle: Vehicle): { label: string; color: string; pctKm: number; pctDays: number } {
+function urgencyLevel(rule: PartRule, vehicle: Vehicle, C: AppThemeColors): { label: string; color: string; pctKm: number; pctDays: number } {
   const kmSince = vehicle.currentOdometer - rule.lastReplacedKm;
   const daysSince = Math.floor((Date.now() - new Date(rule.lastReplacedDate).getTime()) / (1000 * 60 * 60 * 24));
   const pctKm = rule.intervalKm > 0 ? Math.min(kmSince / rule.intervalKm, 1) : 0;
@@ -25,7 +24,9 @@ function urgencyLevel(rule: PartRule, vehicle: Vehicle): { label: string; color:
 }
 
 export default function ReminderItem({ rule, vehicle, onMarkReplaced, onDelete }: Props) {
-  const { label, color, pctKm, pctDays } = urgencyLevel(rule, vehicle);
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
+  const { label, color, pctKm, pctDays } = urgencyLevel(rule, vehicle, C);
   const kmLeft = Math.max(0, rule.intervalKm - (vehicle.currentOdometer - rule.lastReplacedKm));
   const daysLeft = Math.max(0, rule.intervalDays - Math.floor((Date.now() - new Date(rule.lastReplacedDate).getTime()) / 86400000));
 
@@ -69,7 +70,7 @@ export default function ReminderItem({ rule, vehicle, onMarkReplaced, onDelete }
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: C.card,
     borderRadius: 14,
