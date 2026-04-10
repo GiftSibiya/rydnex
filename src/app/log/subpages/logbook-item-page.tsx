@@ -16,7 +16,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import skaftinClient from "@/backend/client/SkaftinClient";
 import routes from "@/constants/ApiRoutes";
-import Colors from "@/constants/colors";
 import {
   REPAIR_ITEM_CATALOG,
   RepairItemCategoryId,
@@ -25,10 +24,10 @@ import {
   ServiceItemCategoryId,
 } from "@/constants/Constants";
 import { useVehicle } from "@/contexts/VehicleContext";
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
-
-const C = Colors.dark;
 
 const CATEGORY_META: Record<ServiceItemCategoryId, { icon: FeatherIconName; color: string }> = {
   engine_fluids: { icon: "droplet", color: "#3B9EDB" },
@@ -191,6 +190,8 @@ function Row({
   accentColor?: string;
   delay?: number;
 }) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(10)).current;
 
@@ -219,6 +220,8 @@ function Row({
 }
 
 function SectionHeading({ label }: { label: string }) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   return (
     <View style={styles.sectionHeading}>
       <View style={styles.sectionLine} />
@@ -229,6 +232,8 @@ function SectionHeading({ label }: { label: string }) {
 }
 
 export default function LogBookItemRoute() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<Record<string, string | string[]>>() as unknown as LogBookItemParams;
@@ -583,7 +588,7 @@ export default function LogBookItemRoute() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 20, paddingBottom: 60, gap: 20 },
 

@@ -18,7 +18,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LuxInput from "@/components/forms/LuxInput";
 import skaftinClient from "@/backend/client/SkaftinClient";
 import routes from "@/constants/ApiRoutes";
-import Colors from "@/constants/colors";
 import {
   REPAIR_ITEM_CATALOG,
   RepairItemCategoryId,
@@ -29,10 +28,10 @@ import {
   buildServiceDescriptionFromSelection,
 } from "@/constants/Constants";
 import { useVehicle } from "@/contexts/VehicleContext";
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
-
-const C = Colors.dark;
 
 const CATEGORY_META: Record<ServiceItemCategoryId, { icon: FeatherIconName; color: string }> = {
   engine_fluids: { icon: "droplet", color: "#3B9EDB" },
@@ -101,11 +100,54 @@ function daysInMonth(month: number, year: number) {
   return new Date(year, month, 0).getDate();
 }
 
+const createPickerStyles = (C: AppThemeColors) => StyleSheet.create({
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
+  card: {
+    position: "absolute",
+    bottom: Platform.OS === "ios" ? 34 : 24,
+    left: 16, right: 16,
+    backgroundColor: C.card,
+    borderColor: C.cardBorder,
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+  },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  title: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text },
+  columns: { flexDirection: "row", height: ITEM_H * VISIBLE, overflow: "hidden" },
+  column: { flex: 1, position: "relative" },
+  scroll: { flex: 1 },
+  item: { height: ITEM_H, alignItems: "center", justifyContent: "center" },
+  itemText: { fontSize: 18, fontFamily: "Inter_400Regular", color: C.textMuted },
+  itemSelected: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 20 },
+  highlight: {
+    position: "absolute",
+    top: PAD * ITEM_H, left: 4, right: 4,
+    height: ITEM_H,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.surfaceBorder,
+    backgroundColor: C.surfaceElevated,
+  },
+  btnRow: { flexDirection: "row", gap: 10 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 13, borderRadius: 12,
+    borderWidth: 1, borderColor: C.surfaceBorder,
+    alignItems: "center", backgroundColor: C.surfaceElevated,
+  },
+  cancelText: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.textMuted },
+  confirmBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: "center", backgroundColor: C.tint },
+  confirmText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#000" },
+});
+
 function PickerColumn({ items, selected, onSelect }: {
   items: (string | number)[];
   selected: number;
   onSelect: (i: number) => void;
 }) {
+  const { colors: C } = useAppTheme();
+  const pickerStyles = useMemo(() => createPickerStyles(C), [C]);
   const ref = useRef<ScrollView>(null);
   const didMount = useRef(false);
 
@@ -155,6 +197,8 @@ function DatePickerModal({ visible, value, onConfirm, onClose }: {
   onConfirm: (date: string) => void;
   onClose: () => void;
 }) {
+  const { colors: C } = useAppTheme();
+  const pickerStyles = useMemo(() => createPickerStyles(C), [C]);
   const parsed = useMemo(() => { const d = new Date(value); return isNaN(d.getTime()) ? new Date() : d; }, [value]);
   const currentYear = new Date().getFullYear();
   const years = useMemo(() => range(currentYear - 10, currentYear + 2), [currentYear]);
@@ -203,52 +247,13 @@ function DatePickerModal({ visible, value, onConfirm, onClose }: {
   );
 }
 
-const pickerStyles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)" },
-  card: {
-    position: "absolute",
-    bottom: Platform.OS === "ios" ? 34 : 24,
-    left: 16, right: 16,
-    backgroundColor: C.card,
-    borderColor: C.cardBorder,
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    gap: 12,
-  },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  title: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text },
-  columns: { flexDirection: "row", height: ITEM_H * VISIBLE, overflow: "hidden" },
-  column: { flex: 1, position: "relative" },
-  scroll: { flex: 1 },
-  item: { height: ITEM_H, alignItems: "center", justifyContent: "center" },
-  itemText: { fontSize: 18, fontFamily: "Inter_400Regular", color: C.textMuted },
-  itemSelected: { fontFamily: "Inter_700Bold", color: C.text, fontSize: 20 },
-  highlight: {
-    position: "absolute",
-    top: PAD * ITEM_H, left: 4, right: 4,
-    height: ITEM_H,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: C.surfaceBorder,
-    backgroundColor: C.surfaceElevated,
-  },
-  btnRow: { flexDirection: "row", gap: 10 },
-  cancelBtn: {
-    flex: 1, paddingVertical: 13, borderRadius: 12,
-    borderWidth: 1, borderColor: C.surfaceBorder,
-    alignItems: "center", backgroundColor: C.surfaceElevated,
-  },
-  cancelText: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.textMuted },
-  confirmBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: "center", backgroundColor: C.tint },
-  confirmText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#000" },
-});
-
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 type Params = Record<string, string | string[]>;
 
 export default function LogbookItemEditPage() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<Params>();
@@ -758,6 +763,8 @@ export default function LogbookItemEditPage() {
 }
 
 function DateField({ value, onPress }: { value: string; onPress: () => void }) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   return (
     <View style={styles.dateWrap}>
       <Text style={styles.dateLabel}>Date</Text>
@@ -770,7 +777,7 @@ function DateField({ value, onPress }: { value: string; onPress: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 20, gap: 20 },
   header: {

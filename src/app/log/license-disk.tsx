@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -13,12 +13,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import GoldButton from "@/components/buttons/GoldButton";
 import LuxCard from "@/components/elements/LuxCard";
 import LuxInput from "@/components/forms/LuxInput";
-import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
-
-const C = Colors.dark;
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 export default function LicenseDiskScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const { activeVehicle, licenseDisk, upsertLicenseDisk } = useVehicle();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -256,6 +257,8 @@ type DetailRowProps = {
 };
 
 function DetailRow({ label, value, mono, highlight, last }: DetailRowProps) {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const valueColor = highlight === "danger" ? C.danger : highlight === "warning" ? C.warning : C.text;
   return (
     <LuxCard style={[styles.detailRow, last && { marginBottom: 0 }]}>
@@ -267,7 +270,7 @@ function DetailRow({ label, value, mono, highlight, last }: DetailRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 20, paddingBottom: 100, gap: 16 },
   headerRow: {

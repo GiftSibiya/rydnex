@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -13,13 +13,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import GoldButton from "@/components/buttons/GoldButton";
 import LuxInput from "@/components/forms/LuxInput";
 import VehiclePickerModal from "@/components/modals/VehiclePickerModal";
-import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
-const C = Colors.dark;
 const currentYear = new Date().getFullYear();
 
 export default function VehicleEditPage() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const { activeVehicle, updateVehicle } = useVehicle();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -208,7 +210,7 @@ export default function VehicleEditPage() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   scroll: { flex: 1, backgroundColor: C.background },
   content: { paddingHorizontal: 20, gap: 20 },
   fallback: {

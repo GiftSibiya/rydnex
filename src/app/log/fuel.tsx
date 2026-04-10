@@ -16,16 +16,18 @@ import {
 import FuelLevelGauge from "@/components/elements/FuelLevelGauge";
 import GoldButton from "@/components/buttons/GoldButton";
 import LuxInput from "@/components/forms/LuxInput";
-import Colors from "@/constants/colors";
 import { useVehicle } from "@/contexts/VehicleContext";
 import useFuelPricesStore, { selectDefaultCostPerLiter } from "@/stores/data/FuelPricesStore";
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
-const C = Colors.dark;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const parseNumericText = (value: string) => Number(value.replace(/,/g, "."));
 
 
 export default function fuelScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const { activeVehicle, addFuelLog } = useVehicle();
   const defaultCostPerLiter = useFuelPricesStore(selectDefaultCostPerLiter);
   const syncFuelPrices = useFuelPricesStore((s) => s.sync);
@@ -328,7 +330,7 @@ export default function fuelScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, gap: 20 },
   iconRow: { alignItems: "center", gap: 8, paddingTop: 8 },

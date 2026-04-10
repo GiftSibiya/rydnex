@@ -15,7 +15,6 @@ import {
 } from "react-native";
 import GoldButton from "@/components/buttons/GoldButton";
 import LuxInput from "@/components/forms/LuxInput";
-import Colors from "@/constants/colors";
 import {
   REPAIR_ITEM_CATALOG,
   RepairItemCategoryId,
@@ -26,6 +25,8 @@ import {
   buildServiceDescriptionFromSelection,
 } from "@/constants/Constants";
 import { useVehicle } from "@/contexts/VehicleContext";
+import { useAppTheme } from "@/themes/AppTheme";
+import { AppThemeColors } from "@/themes/theme";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -62,8 +63,6 @@ function formatInterval(item: ServiceCatalogItem): string | null {
   return null;
 }
 
-const C = Colors.dark;
-
 // ─── Scroll Date Picker ───────────────────────────────────────────────────────
 
 const ITEM_H = 44;
@@ -82,135 +81,7 @@ function daysInMonth(month: number, year: number) {
   return new Date(year, month, 0).getDate();
 }
 
-type ColumnProps = {
-  items: (string | number)[];
-  selected: number; // index
-  onSelect: (index: number) => void;
-};
-
-function PickerColumn({ items, selected, onSelect }: ColumnProps) {
-  const ref = useRef<ScrollView>(null);
-  const didMount = useRef(false);
-
-  // Scroll to selected index on mount and when selected changes externally
-  const scrollTo = useCallback((index: number, animated: boolean) => {
-    ref.current?.scrollTo({ y: index * ITEM_H, animated });
-  }, []);
-
-  // Mount — scroll without animation
-  const onLayout = useCallback(() => {
-    if (!didMount.current) {
-      didMount.current = true;
-      scrollTo(selected, false);
-    }
-  }, [selected, scrollTo]);
-
-  const handleMomentumEnd = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_H);
-      const clamped = Math.max(0, Math.min(index, items.length - 1));
-      onSelect(clamped);
-      scrollTo(clamped, true);
-    },
-    [items.length, onSelect, scrollTo],
-  );
-
-  return (
-    <View style={pickerStyles.column}>
-      {/* Highlight band — behind the scroll content */}
-      <View pointerEvents="none" style={pickerStyles.highlight} />
-      <ScrollView
-        ref={ref}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM_H}
-        decelerationRate="fast"
-        onLayout={onLayout}
-        onMomentumScrollEnd={handleMomentumEnd}
-        contentContainerStyle={{ paddingVertical: PAD * ITEM_H }}
-        style={pickerStyles.scroll}
-      >
-        {items.map((item, i) => (
-          <TouchableOpacity
-            key={i}
-            style={pickerStyles.item}
-            onPress={() => { onSelect(i); scrollTo(i, true); }}
-            activeOpacity={0.6}
-          >
-            <Text style={[pickerStyles.itemText, i === selected && pickerStyles.itemSelected]}>
-              {typeof item === "number" ? String(item).padStart(2, "0") : item}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-
-type DatePickerModalProps = {
-  visible: boolean;
-  value: string; // YYYY-MM-DD
-  onConfirm: (date: string) => void;
-  onClose: () => void;
-};
-
-function DatePickerModal({ visible, value, onConfirm, onClose }: DatePickerModalProps) {
-  const parsed = useMemo(() => {
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? new Date() : d;
-  }, [value]);
-
-  const currentYear = new Date().getFullYear();
-  const years = useMemo(() => range(currentYear - 10, currentYear + 2), [currentYear]);
-
-  const [dayIdx, setDayIdx] = useState(() => parsed.getDate() - 1);
-  const [monthIdx, setMonthIdx] = useState(() => parsed.getMonth());
-  const [yearIdx, setYearIdx] = useState(() => years.indexOf(parsed.getFullYear()));
-
-  const selectedYear = years[yearIdx] ?? currentYear;
-  const selectedMonth = monthIdx + 1;
-  const maxDays = daysInMonth(selectedMonth, selectedYear);
-  const days = useMemo(() => range(1, maxDays), [maxDays]);
-
-  // Clamp day when month/year changes reduce available days
-  const safeDayIdx = Math.min(dayIdx, days.length - 1);
-
-  const handleConfirm = () => {
-    const d = String(safeDayIdx + 1).padStart(2, "0");
-    const m = String(selectedMonth).padStart(2, "0");
-    onConfirm(`${selectedYear}-${m}-${d}`);
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={pickerStyles.backdrop} onPress={onClose} />
-      <View style={pickerStyles.card} pointerEvents="box-none">
-        <View style={pickerStyles.header}>
-          <Text style={pickerStyles.title}>Select Date</Text>
-          <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-            <Feather name="x" size={18} color={C.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={pickerStyles.columns}>
-          <PickerColumn items={days} selected={safeDayIdx} onSelect={setDayIdx} />
-          <PickerColumn items={MONTHS} selected={monthIdx} onSelect={setMonthIdx} />
-          <PickerColumn items={years} selected={yearIdx < 0 ? years.length - 3 : yearIdx} onSelect={setYearIdx} />
-        </View>
-
-        <View style={pickerStyles.btnRow}>
-          <TouchableOpacity style={pickerStyles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
-            <Text style={pickerStyles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={pickerStyles.confirmBtn} onPress={handleConfirm} activeOpacity={0.7}>
-            <Text style={pickerStyles.confirmText}>Confirm</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
-const pickerStyles = StyleSheet.create({
+const createPickerStyles = (C: AppThemeColors) => StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -290,9 +161,143 @@ const pickerStyles = StyleSheet.create({
   confirmText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#000" },
 });
 
+type ColumnProps = {
+  items: (string | number)[];
+  selected: number; // index
+  onSelect: (index: number) => void;
+};
+
+function PickerColumn({ items, selected, onSelect }: ColumnProps) {
+  const { colors: C } = useAppTheme();
+  const pickerStyles = useMemo(() => createPickerStyles(C), [C]);
+  const ref = useRef<ScrollView>(null);
+  const didMount = useRef(false);
+
+  // Scroll to selected index on mount and when selected changes externally
+  const scrollTo = useCallback((index: number, animated: boolean) => {
+    ref.current?.scrollTo({ y: index * ITEM_H, animated });
+  }, []);
+
+  // Mount — scroll without animation
+  const onLayout = useCallback(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      scrollTo(selected, false);
+    }
+  }, [selected, scrollTo]);
+
+  const handleMomentumEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_H);
+      const clamped = Math.max(0, Math.min(index, items.length - 1));
+      onSelect(clamped);
+      scrollTo(clamped, true);
+    },
+    [items.length, onSelect, scrollTo],
+  );
+
+  return (
+    <View style={pickerStyles.column}>
+      {/* Highlight band — behind the scroll content */}
+      <View pointerEvents="none" style={pickerStyles.highlight} />
+      <ScrollView
+        ref={ref}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_H}
+        decelerationRate="fast"
+        onLayout={onLayout}
+        onMomentumScrollEnd={handleMomentumEnd}
+        contentContainerStyle={{ paddingVertical: PAD * ITEM_H }}
+        style={pickerStyles.scroll}
+      >
+        {items.map((item, i) => (
+          <TouchableOpacity
+            key={i}
+            style={pickerStyles.item}
+            onPress={() => { onSelect(i); scrollTo(i, true); }}
+            activeOpacity={0.6}
+          >
+            <Text style={[pickerStyles.itemText, i === selected && pickerStyles.itemSelected]}>
+              {typeof item === "number" ? String(item).padStart(2, "0") : item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+type DatePickerModalProps = {
+  visible: boolean;
+  value: string; // YYYY-MM-DD
+  onConfirm: (date: string) => void;
+  onClose: () => void;
+};
+
+function DatePickerModal({ visible, value, onConfirm, onClose }: DatePickerModalProps) {
+  const { colors: C } = useAppTheme();
+  const pickerStyles = useMemo(() => createPickerStyles(C), [C]);
+  const parsed = useMemo(() => {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }, [value]);
+
+  const currentYear = new Date().getFullYear();
+  const years = useMemo(() => range(currentYear - 10, currentYear + 2), [currentYear]);
+
+  const [dayIdx, setDayIdx] = useState(() => parsed.getDate() - 1);
+  const [monthIdx, setMonthIdx] = useState(() => parsed.getMonth());
+  const [yearIdx, setYearIdx] = useState(() => years.indexOf(parsed.getFullYear()));
+
+  const selectedYear = years[yearIdx] ?? currentYear;
+  const selectedMonth = monthIdx + 1;
+  const maxDays = daysInMonth(selectedMonth, selectedYear);
+  const days = useMemo(() => range(1, maxDays), [maxDays]);
+
+  // Clamp day when month/year changes reduce available days
+  const safeDayIdx = Math.min(dayIdx, days.length - 1);
+
+  const handleConfirm = () => {
+    const d = String(safeDayIdx + 1).padStart(2, "0");
+    const m = String(selectedMonth).padStart(2, "0");
+    onConfirm(`${selectedYear}-${m}-${d}`);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={pickerStyles.backdrop} onPress={onClose} />
+      <View style={pickerStyles.card} pointerEvents="box-none">
+        <View style={pickerStyles.header}>
+          <Text style={pickerStyles.title}>Select Date</Text>
+          <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
+            <Feather name="x" size={18} color={C.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={pickerStyles.columns}>
+          <PickerColumn items={days} selected={safeDayIdx} onSelect={setDayIdx} />
+          <PickerColumn items={MONTHS} selected={monthIdx} onSelect={setMonthIdx} />
+          <PickerColumn items={years} selected={yearIdx < 0 ? years.length - 3 : yearIdx} onSelect={setYearIdx} />
+        </View>
+
+        <View style={pickerStyles.btnRow}>
+          <TouchableOpacity style={pickerStyles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
+            <Text style={pickerStyles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={pickerStyles.confirmBtn} onPress={handleConfirm} activeOpacity={0.7}>
+            <Text style={pickerStyles.confirmText}>Confirm</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ServiceLogScreen() {
+  const { colors: C } = useAppTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const params = useLocalSearchParams<{ type?: string }>();
   const { activeVehicle, addServiceLog } = useVehicle();
   const router = useRouter();
@@ -638,7 +643,7 @@ export default function ServiceLogScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C: AppThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   content: { padding: 24, gap: 20 },
   iconRow: { alignItems: "center", gap: 8, paddingTop: 8 },
