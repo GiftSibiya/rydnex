@@ -16,8 +16,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LuxInput from "@/components/forms/LuxInput";
-import skaftinClient from "@/backend/client/SkaftinClient";
-import routes from "@/constants/ApiRoutes";
 import {
   REPAIR_ITEM_CATALOG,
   RepairItemCategoryId,
@@ -28,6 +26,7 @@ import {
   buildServiceDescriptionFromSelection,
 } from "@/constants/Constants";
 import { useVehicle } from "@/contexts/VehicleContext";
+import { useLogLinkedItems } from "@/hooks/useLogLinkedItems";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
 
@@ -81,6 +80,19 @@ function deriveSelectionAndExtra(
     else extra.push(p);
   }
   return { selected, extra: extra.join("; ") };
+}
+
+/** Saved log text: use the description field as-is when non-empty; otherwise names from ticks only. */
+function effectiveLogDescription(
+  kind: "service" | "repair",
+  descriptionTrim: string,
+  selectedService: Record<string, boolean>,
+  selectedRepair: Record<string, boolean>
+): string {
+  if (descriptionTrim) return descriptionTrim;
+  return kind === "repair"
+    ? buildRepairDescriptionFromSelection(selectedRepair, "").trim()
+    : buildServiceDescriptionFromSelection(selectedService, "").trim();
 }
 
 // ─── Date Picker ─────────────────────────────────────────────────────────────
@@ -265,29 +277,28 @@ export default function LogbookItemEditPage() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const linkKind = isRepairLog ? "repair" : "service";
+  const { linkedSlugs, loading: linksLoading, error: linksError } = useLogLinkedItems(
+    _type === "service" ? id : undefined,
+    linkKind
+  );
+
   const toDateStr = (raw: string) => {
     const d = new Date(raw);
     return isNaN(d.getTime()) ? new Date().toISOString().slice(0, 10) : d.toISOString().slice(0, 10);
   };
 
-  const [selectedServiceItems, setSelectedServiceItems] = useState<Record<string, boolean>>(() => {
-    if (_type !== "service" || isRepairLog) return {};
-    return deriveSelectionAndExtra(String(params.description ?? ""), "service").selected;
-  });
-  const [selectedRepairItems, setSelectedRepairItems] = useState<Record<string, boolean>>(() => {
-    if (_type !== "service" || !isRepairLog) return {};
-    return deriveSelectionAndExtra(String(params.description ?? ""), "repair").selected;
-  });
+  const [selectedServiceItems, setSelectedServiceItems] = useState<Record<string, boolean>>({});
+  const [selectedRepairItems, setSelectedRepairItems] = useState<Record<string, boolean>>({});
   const [expandedCategory, setExpandedCategory] = useState<ServiceItemCategoryId | null>(null);
   const [expandedRepairCategory, setExpandedRepairCategory] = useState<RepairItemCategoryId | null>(null);
 
   // ── Service / Repair state ──
   const [svcForm, setSvcForm] = useState(() => {
     const full = String(params.description ?? "");
-    const kind = String(params.type) === "repair" ? "repair" : "service";
-    const extra = _type === "service" ? deriveSelectionAndExtra(full, kind).extra : "";
     return {
-      description: extra,
+      /** Full line stored on the log — editing this replaces the saved description (ticks add DB links only). */
+      description: full,
       cost: String(params.cost ?? ""),
       odometer: String(params.odometer ?? ""),
       workshop: String(params.workshop ?? ""),
@@ -298,44 +309,19 @@ export default function LogbookItemEditPage() {
 
   useEffect(() => {
     if (_type !== "service") return;
-    const rawId = String(params.id ?? "");
-    const dbId = rawId.startsWith("s-") || rawId.startsWith("r-") ? Number(rawId.slice(2)) : NaN;
-    if (!dbId || Number.isNaN(dbId)) return;
-    const fromRepair = rawId.startsWith("r-");
-    const linksRoute = fromRepair
-      ? routes.maintenance.repairLogItems.list
-      : routes.maintenance.serviceLogItems.list;
-    const linksWhere = fromRepair
-      ? { repair_log_id: dbId }
-      : { service_log_id: dbId };
-    const itemsRoute = fromRepair
-      ? routes.reference.repairItems.list
-      : routes.reference.serviceItems.list;
-    const itemIdKey = fromRepair ? "repair_item_id" : "service_item_id";
-    let cancelled = false;
-    skaftinClient
-      .post<Record<string, any>[]>(linksRoute, { where: linksWhere })
-      .then(async (linksRes) => {
-        const links = Array.isArray(linksRes.data) ? linksRes.data : [];
-        if (links.length === 0 || cancelled) return;
-        const itemIds = links.map((l) => Number(l[itemIdKey])).filter((n) => !Number.isNaN(n));
-        const itemsRes = await skaftinClient.post<Record<string, any>[]>(itemsRoute, {});
-        if (cancelled) return;
-        const all = Array.isArray(itemsRes.data) ? itemsRes.data : [];
-        const slugMap: Record<string, boolean> = {};
-        for (const row of all) {
-          if (itemIds.includes(Number(row.id)) && row.slug != null) {
-            slugMap[String(row.slug)] = true;
-          }
-        }
-        if (fromRepair) setSelectedRepairItems(slugMap);
-        else setSelectedServiceItems(slugMap);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [_type, params.id]);
+    if (linksLoading) return;
+    if (!linksError) {
+      const map: Record<string, boolean> = {};
+      for (const s of linkedSlugs) map[s] = true;
+      if (isRepairLog) setSelectedRepairItems(map);
+      else setSelectedServiceItems(map);
+      return;
+    }
+    const kind = isRepairLog ? "repair" : "service";
+    const { selected } = deriveSelectionAndExtra(String(params.description ?? ""), kind);
+    if (isRepairLog) setSelectedRepairItems(selected);
+    else setSelectedServiceItems(selected);
+  }, [_type, linksLoading, linksError, linkedSlugs, isRepairLog, params.description]);
 
   const toggleCategory = (cat: ServiceItemCategoryId) => {
     setExpandedCategory((prev) => (prev === cat ? null : cat));
@@ -386,10 +372,14 @@ export default function LogbookItemEditPage() {
   const validate = () => {
     const e: Record<string, string> = {};
     if (_type === "service") {
-      const built = isRepairLog
-        ? buildRepairDescriptionFromSelection(selectedRepairItems, svcForm.description)
-        : buildServiceDescriptionFromSelection(selectedServiceItems, svcForm.description);
-      if (!built.trim()) e.description = "Select at least one item or add a description";
+      const kind = isRepairLog ? "repair" : "service";
+      const effective = effectiveLogDescription(
+        kind,
+        svcForm.description.trim(),
+        selectedServiceItems,
+        selectedRepairItems
+      );
+      if (!effective) e.description = "Select at least one item or enter a description";
       if (!svcForm.cost || isNaN(Number(svcForm.cost))) e.cost = "Enter a valid cost";
       if (!svcForm.odometer || isNaN(Number(svcForm.odometer))) e.odometer = "Enter a valid odometer reading";
     } else if (_type === "fuel") {
@@ -408,9 +398,13 @@ export default function LogbookItemEditPage() {
     setLoading(true);
     try {
       if (_type === "service") {
-        const description = isRepairLog
-          ? buildRepairDescriptionFromSelection(selectedRepairItems, svcForm.description)
-          : buildServiceDescriptionFromSelection(selectedServiceItems, svcForm.description);
+        const kind = isRepairLog ? "repair" : "service";
+        const description = effectiveLogDescription(
+          kind,
+          svcForm.description.trim(),
+          selectedServiceItems,
+          selectedRepairItems
+        );
         const selectedServiceItemSlugs = !isRepairLog
           ? Object.entries(selectedServiceItems).filter(([, v]) => v).map(([slug]) => slug)
           : undefined;
@@ -488,6 +482,9 @@ export default function LogbookItemEditPage() {
           {!isRepairLog && (
             <View style={styles.checklistSection}>
               <Text style={styles.checklistSectionTitle}>Service items</Text>
+              <Text style={styles.checklistHint}>
+                Ticked items are stored as links. The description below is saved exactly as written—clear it and type a new line to replace the whole text.
+              </Text>
               {SERVICE_ITEM_CATALOG.map((category) => {
                 const meta = CATEGORY_META[category.id];
                 const selectedCount = category.items.filter((i) => selectedServiceItems[i.id]).length;
@@ -554,6 +551,9 @@ export default function LogbookItemEditPage() {
           {isRepairLog && (
             <View style={styles.checklistSection}>
               <Text style={styles.checklistSectionTitle}>Repair items</Text>
+              <Text style={styles.checklistHint}>
+                Ticked items are stored as links. The description below is saved exactly as written—clear it and type a new line to replace the whole text.
+              </Text>
               {REPAIR_ITEM_CATALOG.map((category) => {
                 const meta = REPAIR_CATEGORY_META[category.id];
                 const selectedCount = category.items.filter((i) => selectedRepairItems[i.id]).length;
@@ -614,8 +614,8 @@ export default function LogbookItemEditPage() {
             label="Description"
             placeholder={
               isRepairLog
-                ? "Additional detail (optional), or describe repair if nothing is ticked above"
-                : "Additional detail (optional), or describe work if nothing is ticked above"
+                ? "Full repair summary (saved as shown). Leave blank only if the lines above fully describe it."
+                : "Full service summary (saved as shown). Leave blank only if the lines above fully describe it."
             }
             value={svcForm.description}
             onChangeText={(t) => setSvcForm((f) => ({ ...f, description: t }))}
@@ -807,6 +807,14 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 4,
+  },
+  checklistHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: C.textSubtle,
+    marginBottom: 8,
+    marginTop: -4,
+    lineHeight: 17,
   },
   categoryCard: {
     borderRadius: 12,

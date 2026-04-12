@@ -16,10 +16,11 @@ import {
   ViewToken,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import VehicleSummaryItem, { getDiskDaysLeft } from "@/components/items/VehicleSummaryItem";
+import { getDiskDaysLeft } from "@/components/items/VehicleSummaryItem";
 import { Vehicle, useVehicle } from "@/contexts/VehicleContext";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
+import { VehicleSummaryItem,  } from "@/components/ComponentsIndex";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 const CARD_W = SCREEN_W - 48;
@@ -47,6 +48,7 @@ export default function index() {
     licenseDisk,
     setActiveVehicle,
     refreshLogs,
+    vehicleOwnership,
   } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -98,13 +100,17 @@ export default function index() {
             checks={checks}
             onPress={() => {
               setActiveVehicle(item);
-              router.push("/garage/vehicle-details-page");
+              router.push(
+                vehicleOwnership(item.id) === "fleet"
+                  ? "/garage/organisation-vehicle-details"
+                  : "/garage/vehicle-details-page"
+              );
             }}
           />
         </View>
       );
     },
-    [activeVehicle, licenseDisk, partRules, lastChecks]
+    [activeVehicle, licenseDisk, partRules, lastChecks, vehicleOwnership, setActiveVehicle, router]
   );
 
   // ── Active vehicle alerts ──────────────────────────────────────────────────

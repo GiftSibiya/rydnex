@@ -29,7 +29,7 @@ Selected repair checklist items are also persisted in `repair_logs_items` (`repa
 
 | Category slug | Title | Items |
 |---|---|---|
-| `engine_repair` | Engine | Head gasket, Engine mount, Valve/lifter, Timing chain, Turbocharger, EGR valve, Oil leak |
+| `engine_repair` | Engine | Head gasket, Engine mount, Valve/lifter, Timing chain, Turbocharger, EGR valve, Oil leak, Coolant pipes/hoses, Coolant reservoir, Radiator, Water pump, Thermostat |
 | `brakes_steering` | Brakes & Steering | Caliper, Drum, Handbrake cable, ABS sensor/module, Rack & pinion, Steering pump, Tie rod ends |
 | `suspension_drivetrain` | Suspension & Drivetrain | Ball joints, Control arm, CV joint/boot, Driveshaft, Differential, Gearbox, Clutch hydraulics |
 | `electrical_sensors` | Electrical & Sensors | ECU/BCM, O2/lambda, MAF/MAP, Crank/cam sensor, Wiring, Alternator, Starter motor |

@@ -34,7 +34,10 @@ interface AuthState {
 
   // Derived helpers
   isAdmin: () => boolean;
+  isPro: () => boolean;
+  isOrgAdmin: () => boolean;
   getRoles: () => AuthUserRole[];
+  setOrganisationId: (orgId: number | null) => void;
 
   // Data fetches
   updateUserDetails: (user_id: number) => void;
@@ -117,7 +120,18 @@ const useAuthStore = create<AuthState>()(
 
       // Helpers
       isAdmin: () => get().user?.roles?.some(r => r.role_key === 'admin') ?? false,
+      isPro: () => get().user?.roles?.some(r => r.role_key === 'pro_user' || r.role_key === 'admin') ?? false,
+      isOrgAdmin: () => {
+        const state = get();
+        return state.isPro() && state.user?.organisation_id != null;
+      },
       getRoles: () => get().user?.roles ?? [],
+      setOrganisationId: (orgId: number | null) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          set({ user: { ...currentUser, organisation_id: orgId } });
+        }
+      },
 
       // Data fetches
       updateUserDetails: async (user_id: number) => {

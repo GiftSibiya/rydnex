@@ -2,11 +2,11 @@
 
 ## Authentication
 
-- Entry: `src/app/index.tsx`, `src/app/login.tsx`, `src/app/register.tsx`, `src/app/register-otp.tsx`
+- Entry: `src/app/index.tsx`, `src/app/auth/login-screen.tsx`, `src/app/auth/register-screen.tsx`, `src/app/auth/register-otp-screen.tsx`
 - Session: `AuthContext` gates navigation after Zustand rehydration; JWT and user live in `AuthStore` (persist key `user-store`) so `SkaftinClient` can send `Authorization: Bearer`.
 - With `STATIC_DATA_MODE === true` (`src/constants/AppConfig.ts`), `authService` uses stubs. With `false`, login uses `POST /app-api/auth/auth/login`, register uses `POST /app-api/auth/auth/register`, OTP verification uses `POST /app-api/auth/auth/verify-otp` with `{ user_id, otp }`, and OTP resend uses `POST /app-api/auth/auth/resend-otp` (see `client-sdk-mobile/requests/01-AUTH-REQUESTS.md`).
-- Expo Router auth screens (`src/app/register.tsx`, `src/app/register-otp.tsx`) now initiate backend registration before OTP step routing; register returns OTP continuation metadata (`requiresOtp`, `userId`) used to continue verification.
-- `src/app/register-otp.tsx` verifies codes via `POST /app-api/auth/auth/verify-otp` with `{ user_id, otp }`, supports resend via `POST /app-api/auth/auth/resend-otp`, and stores the verified session in `AuthStore`.
+- Expo Router auth screens (`register-screen` → `register-otp-screen`) call `POST /app-api/auth/auth/register` then, when the API does not return a session, continue with OTP using `user_id` from the response body or top-level JSON. Verify uses `POST /app-api/auth/auth/verify-otp` with `{ user_id, otp }` where `otp` is a **string** (trimmed); resend uses `POST /app-api/auth/auth/resend-otp` with `{ user_id }`.
+- `register-otp-screen`: if verify-otp returns a full session in `data`, it is stored in `AuthStore`. If `data` is empty but `success` is true (common), the app signs in with the password kept in memory between register and OTP (`registrationPendingLogin`), then navigates home; if that login fails or credentials were lost, it sends the user to the login screen.
 - Legacy React Navigation auth screens (`src/pages/auth/RegistrationScreen.tsx`, `src/pages/auth/RegistrationOtpScreen.tsx`) also follow the backend register and OTP continuation flow.
 
 ## Dashboard (Home)

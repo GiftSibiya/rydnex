@@ -19,6 +19,7 @@ import LuxCard from "@/components/elements/LuxCard";
 import LuxInput from "@/components/forms/LuxInput";
 import VehiclePickerModal from "@/components/modals/VehiclePickerModal";
 import { getCarLogo } from "@/constants/carLogos";
+import { useAuth } from "@/contexts/AuthContext";
 import { Vehicle, useVehicle, LicenseDisk } from "@/contexts/VehicleContext";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
@@ -45,7 +46,9 @@ export default function garageTab() {
     FREE_TIER_LIMIT,
     licenseDisk,
     refreshLogs,
+    vehicleOwnership,
   } = useVehicle();
+  const { isPro } = useAuth();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const styles = useMemo(() => createStyles(C), [C]);
@@ -64,6 +67,19 @@ export default function garageTab() {
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /** Free plan only: pro / fleet use tier limits inside VehicleContext.addVehicle. */
+  const freeTierAtVehicleCap = !isPro && vehicles.length >= FREE_TIER_LIMIT;
+
+  const ownVehicles = useMemo(
+    () => vehicles.filter((v) => vehicleOwnership(v.id) === "own"),
+    [vehicles, vehicleOwnership]
+  );
+  const orgVehicles = useMemo(
+    () => vehicles.filter((v) => vehicleOwnership(v.id) === "fleet"),
+    [vehicles, vehicleOwnership]
+  );
+  const showBothSections = ownVehicles.length > 0 && orgVehicles.length > 0;
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
@@ -103,7 +119,12 @@ export default function garageTab() {
     });
     setLoading(false);
     if (!success) {
-      Alert.alert("Free Tier Limit", `You can only track ${FREE_TIER_LIMIT} vehicles on the free plan.`);
+      Alert.alert(
+        isPro ? "Could not add vehicle" : "Free tier limit",
+        isPro
+          ? "Check your organisation tier limit or try again."
+          : `You can only track ${FREE_TIER_LIMIT} vehicles on the free plan.`
+      );
       return;
     }
     setShowAdd(false);
@@ -133,14 +154,14 @@ export default function garageTab() {
         <View style={styles.topRow}>
           <Text style={styles.pageTitle}>My Garage</Text>
           <TouchableOpacity
-            style={[styles.addBtn, vehicles.length >= FREE_TIER_LIMIT && styles.addBtnDisabled]}
-            onPress={() => vehicles.length < FREE_TIER_LIMIT && setShowAdd(true)}
+            style={[styles.addBtn, freeTierAtVehicleCap && styles.addBtnDisabled]}
+            onPress={() => !freeTierAtVehicleCap && setShowAdd(true)}
             activeOpacity={0.8}
           >
             <Feather
               name="plus"
               size={18}
-              color={vehicles.length >= FREE_TIER_LIMIT ? C.textSubtle : C.tint}
+              color={freeTierAtVehicleCap ? C.textSubtle : C.tint}
             />
           </TouchableOpacity>
         </View>
@@ -158,12 +179,12 @@ export default function garageTab() {
           />
         }
       >
-        {vehicles.length >= FREE_TIER_LIMIT && (
+        {freeTierAtVehicleCap ? (
           <View style={styles.limitBanner}>
             <Feather name="info" size={14} color={C.warning} />
             <Text style={styles.limitText}>Free tier: {FREE_TIER_LIMIT} vehicles max</Text>
           </View>
-        )}
+        ) : null}
 
         {vehicles.length === 0 ? (
           <View style={styles.emptyState}>
@@ -175,103 +196,214 @@ export default function garageTab() {
             <GoldButton
               label="Add Vehicle"
               onPress={() => setShowAdd(true)}
+              disabled={freeTierAtVehicleCap}
               style={{ marginTop: 8 }}
             />
           </View>
         ) : (
-          vehicles.map((v) => (
-            <TouchableOpacity
-              key={v.id}
-              activeOpacity={0.85}
-              onPress={() => {
-                setActiveVehicle(v);
-                router.push("/garage/vehicle-details-page");
-              }}
-            >
-              <LuxCard style={styles.vehicleCard}>
-                <View style={styles.vehicleHeader}>
-                  <View style={styles.vehicleIcon}>
-                    {getCarLogo(v.make) ? (
-                      <Image source={getCarLogo(v.make)!} style={styles.vehicleLogoImg} resizeMode="contain" />
-                    ) : (
-                      <Feather name="truck" size={22} color={C.tint} />
-                    )}
-                  </View>
-                  <View style={styles.vehicleInfo}>
-                    <Text style={styles.vehicleName}>
-                      {v.year} {v.make}
-                    </Text>
-                    <Text style={styles.vehicleModel}>
-                      {v.model}{v.trim ? ` ${v.trim}` : ""}
-                    </Text>
-                  </View>
+          <>
+            {ownVehicles.length > 0 ? (
+              <>
+                {showBothSections ? (
+                  <Text style={styles.sectionHeading}>Your vehicles</Text>
+                ) : null}
+                {ownVehicles.map((v) => (
                   <TouchableOpacity
-                    onPress={() => handleDelete(v)}
-                    style={styles.delBtn}
-                    activeOpacity={0.7}
+                    key={v.id}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setActiveVehicle(v);
+                      router.push("/garage/vehicle-details-page");
+                    }}
                   >
-                    <Feather name="trash-2" size={16} color={C.danger} />
+                    <LuxCard style={styles.vehicleCard}>
+                      <View style={styles.vehicleHeader}>
+                        <View style={styles.vehicleIcon}>
+                          {getCarLogo(v.make) ? (
+                            <Image source={getCarLogo(v.make)!} style={styles.vehicleLogoImg} resizeMode="contain" />
+                          ) : (
+                            <Feather name="truck" size={22} color={C.tint} />
+                          )}
+                        </View>
+                        <View style={styles.vehicleInfo}>
+                          <Text style={styles.vehicleName}>
+                            {v.year} {v.make}
+                          </Text>
+                          <Text style={styles.vehicleModel}>
+                            {v.model}{v.trim ? ` ${v.trim}` : ""}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => handleDelete(v)}
+                          style={styles.delBtn}
+                          activeOpacity={0.7}
+                        >
+                          <Feather name="trash-2" size={16} color={C.danger} />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.vehicleMeta}>
+                        <View style={styles.metaItem}>
+                          <Text style={styles.metaLabel}>Registration</Text>
+                          <Text style={styles.metaValue}>{v.registration || "—"}</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                          <Text style={styles.metaLabel}>Odometer</Text>
+                          <Text style={styles.metaValue}>{v.currentOdometer.toLocaleString()} km</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                          <Text style={styles.metaLabel}>Color</Text>
+                          <Text style={styles.metaValue}>{v.color || "—"}</Text>
+                        </View>
+                      </View>
+                      {v.vin ? <Text style={styles.vin}>VIN: {v.vin}</Text> : null}
+                      <TouchableOpacity
+                        style={[
+                          styles.diskBtn,
+                          licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!) && styles.diskBtnWarning,
+                          licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!) && styles.diskBtnDanger,
+                        ]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setActiveVehicle(v);
+                          router.push("/log/license-disk");
+                        }}
+                        activeOpacity={0.75}
+                      >
+                        <Feather
+                          name="file-text"
+                          size={13}
+                          color={
+                            licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!)
+                              ? C.danger
+                              : licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!)
+                              ? C.warning
+                              : C.tint
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.diskBtnText,
+                            licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!) && { color: C.danger },
+                            licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!) && { color: C.warning },
+                          ]}
+                        >
+                          {licenseDisk(v.id)
+                            ? isLicenseDiskExpired(licenseDisk(v.id)!)
+                              ? "License Expired"
+                              : isLicenseDiskExpiringSoon(licenseDisk(v.id)!)
+                              ? "Expiring Soon"
+                              : `Expires ${licenseDisk(v.id)!.expiryDate}`
+                            : "Add License Disk"}
+                        </Text>
+                        <Feather name="chevron-right" size={13} color={C.textSubtle} />
+                      </TouchableOpacity>
+                    </LuxCard>
                   </TouchableOpacity>
-                </View>
-                <View style={styles.vehicleMeta}>
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaLabel}>Registration</Text>
-                    <Text style={styles.metaValue}>{v.registration || "—"}</Text>
+                ))}
+              </>
+            ) : null}
+
+            {orgVehicles.length > 0 ? (
+              <>
+                {showBothSections ? (
+                  <View style={styles.orgSectionDivider}>
+                    <View style={styles.orgSectionLine} />
+                    <Text style={styles.orgSectionTitle}>Organisation vehicles</Text>
+                    <View style={styles.orgSectionLine} />
                   </View>
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaLabel}>Odometer</Text>
-                    <Text style={styles.metaValue}>{v.currentOdometer.toLocaleString()} km</Text>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaLabel}>Color</Text>
-                    <Text style={styles.metaValue}>{v.color || "—"}</Text>
-                  </View>
-                </View>
-                {v.vin ? <Text style={styles.vin}>VIN: {v.vin}</Text> : null}
-                <TouchableOpacity
-                  style={[
-                    styles.diskBtn,
-                    licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!) && styles.diskBtnWarning,
-                    licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!) && styles.diskBtnDanger,
-                  ]}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setActiveVehicle(v);
-                    router.push("/log/license-disk");
-                  }}
-                  activeOpacity={0.75}
-                >
-                  <Feather
-                    name="file-text"
-                    size={13}
-                    color={
-                      licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!)
-                        ? C.danger
-                        : licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!)
-                        ? C.warning
-                        : C.tint
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.diskBtnText,
-                      licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!) && { color: C.danger },
-                      licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!) && { color: C.warning },
-                    ]}
+                ) : (
+                  <Text style={styles.sectionHeading}>Organisation vehicles</Text>
+                )}
+                <Text style={styles.orgSectionHint}>View only — open a vehicle to see details (no editing).</Text>
+                {orgVehicles.map((v) => (
+                  <TouchableOpacity
+                    key={v.id}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setActiveVehicle(v);
+                      router.push("/garage/organisation-vehicle-details");
+                    }}
                   >
-                    {licenseDisk(v.id)
-                      ? isLicenseDiskExpired(licenseDisk(v.id)!)
-                        ? "License Expired"
-                        : isLicenseDiskExpiringSoon(licenseDisk(v.id)!)
-                        ? "Expiring Soon"
-                        : `Expires ${licenseDisk(v.id)!.expiryDate}`
-                      : "Add License Disk"}
-                  </Text>
-                  <Feather name="chevron-right" size={13} color={C.textSubtle} />
-                </TouchableOpacity>
-              </LuxCard>
-            </TouchableOpacity>
-          ))
+                    <LuxCard style={[styles.vehicleCard, styles.orgVehicleCard]}>
+                      <View style={styles.vehicleHeader}>
+                        <View style={[styles.vehicleIcon, styles.orgVehicleIcon]}>
+                          {getCarLogo(v.make) ? (
+                            <Image source={getCarLogo(v.make)!} style={styles.vehicleLogoImg} resizeMode="contain" />
+                          ) : (
+                            <Feather name="users" size={22} color={C.info} />
+                          )}
+                        </View>
+                        <View style={styles.vehicleInfo}>
+                          <View style={styles.orgBadgeRow}>
+                            <Text style={styles.vehicleName}>
+                              {v.year} {v.make}
+                            </Text>
+                            <View style={styles.orgPill}>
+                              <Text style={styles.orgPillText}>Org</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.vehicleModel}>
+                            {v.model}{v.trim ? ` ${v.trim}` : ""}
+                          </Text>
+                        </View>
+                        <Feather name="chevron-right" size={18} color={C.textSubtle} />
+                      </View>
+                      <View style={styles.vehicleMeta}>
+                        <View style={styles.metaItem}>
+                          <Text style={styles.metaLabel}>Registration</Text>
+                          <Text style={styles.metaValue}>{v.registration || "—"}</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                          <Text style={styles.metaLabel}>Odometer</Text>
+                          <Text style={styles.metaValue}>{v.currentOdometer.toLocaleString()} km</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                          <Text style={styles.metaLabel}>Color</Text>
+                          <Text style={styles.metaValue}>{v.color || "—"}</Text>
+                        </View>
+                      </View>
+                      {v.vin ? <Text style={styles.vin}>VIN: {v.vin}</Text> : null}
+                      <View
+                        style={[
+                          styles.diskBtn,
+                          styles.diskBtnReadOnly,
+                          licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!) && styles.diskBtnWarning,
+                          licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!) && styles.diskBtnDanger,
+                        ]}
+                      >
+                        <Feather
+                          name="file-text"
+                          size={13}
+                          color={
+                            licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!)
+                              ? C.danger
+                              : licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!)
+                              ? C.warning
+                              : C.tint
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.diskBtnText,
+                            licenseDisk(v.id) && isLicenseDiskExpired(licenseDisk(v.id)!) && { color: C.danger },
+                            licenseDisk(v.id) && isLicenseDiskExpiringSoon(licenseDisk(v.id)!) && { color: C.warning },
+                          ]}
+                        >
+                          {licenseDisk(v.id)
+                            ? isLicenseDiskExpired(licenseDisk(v.id)!)
+                              ? "License expired"
+                              : isLicenseDiskExpiringSoon(licenseDisk(v.id)!)
+                              ? "Expiring soon"
+                              : `Expires ${licenseDisk(v.id)!.expiryDate}`
+                            : "No license on file"}
+                        </Text>
+                      </View>
+                    </LuxCard>
+                  </TouchableOpacity>
+                ))}
+              </>
+            ) : null}
+          </>
         )}
       </ScrollView>
 
@@ -403,6 +535,69 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     borderBottomColor: C.separator,
   },
   content: { paddingHorizontal: 20, gap: 14 },
+  sectionHeading: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: C.textSubtle,
+    textTransform: "uppercase",
+    letterSpacing: 0.9,
+    marginBottom: 2,
+    marginTop: 4,
+  },
+  orgSectionDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 20,
+    marginBottom: 4,
+  },
+  orgSectionLine: { flex: 1, height: 1, backgroundColor: C.separator },
+  orgSectionTitle: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    color: C.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  orgSectionHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: C.textSubtle,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
+  orgVehicleCard: {
+    borderColor: "rgba(52,152,219,0.2)",
+    borderWidth: 1,
+  },
+  orgVehicleIcon: {
+    backgroundColor: "rgba(52,152,219,0.1)",
+    borderColor: "rgba(52,152,219,0.22)",
+  },
+  orgBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  orgPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: "rgba(52,152,219,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(52,152,219,0.25)",
+  },
+  orgPillText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: C.info,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  diskBtnReadOnly: {
+    opacity: 0.95,
+  },
   topRow: {
     flexDirection: "row",
     alignItems: "center",

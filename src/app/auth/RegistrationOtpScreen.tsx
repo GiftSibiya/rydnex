@@ -19,10 +19,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONT_FAMILY } from '@/constants/Fonts';
 import { authService } from '@/backend';
 import { AuthStore, ToastStateStore } from '@/stores/StoresIndex';
+import { takePendingRegistrationLogin } from '@/utilities/registrationPendingLogin';
 
 type RouteParams = {
   userId: number;
@@ -34,10 +36,12 @@ const RESEND_SECONDS = 60;
 
 const RegistrationOtpScreen = () => {
   const navigation = useNavigation<any>();
+  const router = useRouter();
   const route = useRoute();
   const { userId, email } = route.params as RouteParams;
 
-  const { setAuthFromRegistration } = AuthStore();
+  const setAuthFromRegistration = AuthStore((s) => s.setAuthFromRegistration);
+  const setAuthFromLogin = AuthStore((s) => s.setAuthFromLogin);
   const { showToast } = ToastStateStore();
 
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
@@ -121,8 +125,42 @@ const RegistrationOtpScreen = () => {
         showToast({ message: result.message ?? result.error ?? 'Verification failed.', type: 'error' });
         return;
       }
-      setAuthFromRegistration(result.data);
-      showToast({ message: 'Account verified. Welcome to rydnex!', type: 'success' });
+      if (result.data) {
+        takePendingRegistrationLogin();
+        setAuthFromRegistration(result.data);
+        showToast({ message: result.message ?? 'Account verified. Welcome to rydnex!', type: 'success' });
+        router.replace('/(tabs)');
+        return;
+      }
+
+      const creds = takePendingRegistrationLogin();
+      if (creds) {
+        const loginRes = await authService.login({
+          email: creds.email,
+          password: creds.password,
+        });
+        if (loginRes.success && 'data' in loginRes && loginRes.data) {
+          setAuthFromLogin(loginRes.data);
+          showToast({ message: result.message ?? 'Account verified. Welcome to rydnex!', type: 'success' });
+          router.replace('/(tabs)');
+          return;
+        }
+        showToast({
+          message:
+            loginRes.success === false
+              ? (loginRes.message ?? loginRes.error ?? 'Signed up but sign-in failed. Try logging in.')
+              : 'Signed up but sign-in failed. Try logging in.',
+          type: 'error',
+        });
+        router.replace('/auth/login-screen');
+        return;
+      }
+
+      showToast({
+        message: result.message ?? 'Email verified. Please sign in with your email and password.',
+        type: 'success',
+      });
+      router.replace('/auth/login-screen');
     } catch (error: any) {
       showToast({ message: error?.message ?? 'Verification failed.', type: 'error' });
     } finally {

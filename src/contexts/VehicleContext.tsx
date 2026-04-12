@@ -1,7 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import skaftinClient from "@/backend/client/SkaftinClient";
+import {
+  fetchRepairCatalogRows,
+  fetchServiceCatalogRows,
+  rowsToSlugIdMap,
+  syncRepairLogJunction,
+  syncServiceLogJunction,
+} from "@/backend/maintenance/logCatalogLinks";
+import { organisationService } from "@/backend/services/OrganisationService";
 import routes from "@/constants/ApiRoutes";
+import { ORG_TIER_LIMITS } from "@/types/Types";
 import useAuthStore from "@/stores/data/AuthStore";
 
 export type Vehicle = {
@@ -16,6 +25,8 @@ export type Vehicle = {
   image?: string;
   currentOdometer: number;
   createdAt: string;
+  /** Internal — DB user_id; used to tag fleet vs own vehicles. */
+  userId?: string;
 };
 
 export type OdometerLog = {
@@ -48,6 +59,23 @@ export type ServiceLog = {
   workshop?: string;
   notes?: string;
 };
+
+export type VehicleIssueStatus = "open" | "resolved";
+
+export type VehicleIssue = {
+  id: string;
+  vehicleId: string;
+  title: string;
+  description?: string;
+  status: VehicleIssueStatus;
+  notedOdometerKm?: number;
+  /** DB `repair_items.id` when linked to catalog */
+  repairItemId?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+};
+
 type AddServiceLogInput = Omit<ServiceLog, "id"> & {
   selectedServiceItemSlugs?: string[];
   selectedRepairItemSlugs?: string[];
@@ -56,6 +84,20 @@ type AddServiceLogInput = Omit<ServiceLog, "id"> & {
 type UpdateServiceLogInput = Partial<Pick<ServiceLog, "description" | "cost" | "odometer" | "workshop" | "notes" | "date">> & {
   selectedServiceItemSlugs?: string[];
   selectedRepairItemSlugs?: string[];
+};
+
+type AddVehicleIssueInput = Omit<
+  VehicleIssue,
+  "id" | "createdAt" | "updatedAt" | "resolvedAt" | "repairItemId"
+> & {
+  /** Resolved to `repair_item_id` via `repair_items` (slug matches catalog `id`). */
+  repairItemSlug?: string | null;
+};
+
+type UpdateVehicleIssueInput = Partial<
+  Pick<VehicleIssue, "title" | "description" | "status" | "notedOdometerKm" | "resolvedAt" | "repairItemId">
+> & {
+  repairItemSlug?: string | null;
 };
 
 export type LastCheck = {
@@ -95,11 +137,14 @@ type VehicleContextType = {
   odometerLogs: OdometerLog[];
   fuelLogs: FuelLog[];
   serviceLogs: ServiceLog[];
+  vehicleIssues: VehicleIssue[];
   lastChecks: LastCheck[];
   partRules: PartRule[];
   licenseDisk: (vehicleId: string) => LicenseDisk | undefined;
   setActiveVehicle: (v: Vehicle) => void;
   addVehicle: (v: Omit<Vehicle, "id" | "createdAt">) => Promise<boolean>;
+  isFleetMode: boolean;
+  vehicleOwnership: (vehicleId: string) => 'own' | 'fleet';
   updateVehicle: (id: string, data: Partial<Vehicle>) => Promise<void>;
   deleteVehicle: (id: string) => Promise<void>;
   addOdometerLog: (log: Omit<OdometerLog, "id">) => Promise<void>;
@@ -107,6 +152,9 @@ type VehicleContextType = {
   addServiceLog: (log: AddServiceLogInput) => Promise<void>;
   deleteServiceLog: (id: string) => Promise<void>;
   updateServiceLog: (id: string, data: UpdateServiceLogInput) => Promise<void>;
+  addVehicleIssue: (issue: AddVehicleIssueInput) => Promise<void>;
+  updateVehicleIssue: (id: string, data: UpdateVehicleIssueInput) => Promise<void>;
+  deleteVehicleIssue: (id: string) => Promise<void>;
   getLatestServiceLogForItem: (vehicleId: string, itemSlug: string) => Promise<ServiceLog | null>;
   deleteFuelLog: (id: string) => Promise<void>;
   updateFuelLog: (id: string, data: Partial<Pick<FuelLog, "liters" | "costPerLiter" | "totalCost" | "odometer" | "date" | "fullTank">>) => Promise<void>;
@@ -131,6 +179,7 @@ const STORAGE_KEYS = {
   lastChecks: "rydnex_last_checks",
   partRules: "rydnex_part_rules",
   licenseDisks: "rydnex_license_disks",
+  vehicleIssues: "rydnex_vehicle_issues",
 };
 
 const FREE_TIER_LIMIT = 2;
@@ -169,6 +218,7 @@ function dbRowToVehicle(row: Record<string, any>): Vehicle {
     color: trimUpperStored(row.color),
     currentOdometer: row.current_odometer ?? 0,
     createdAt: row.created_at ?? new Date().toISOString(),
+    userId: row.user_id != null ? String(row.user_id) : undefined,
   };
 }
 
@@ -294,6 +344,47 @@ function rowToPartRule(row: Record<string, any>): PartRule {
   };
 }
 
+function normalizeIssueStatus(raw: string | undefined | null): VehicleIssueStatus {
+  return raw === "resolved" ? "resolved" : "open";
+}
+
+function rowToVehicleIssue(row: Record<string, any>): VehicleIssue {
+  const status = normalizeIssueStatus(row.status);
+  const resolvedRaw = row.resolved_at;
+  const rid = row.repair_item_id;
+  return {
+    id: String(row.id),
+    vehicleId: String(row.vehicle_id),
+    title: row.title ?? "",
+    description: row.description ?? undefined,
+    status,
+    notedOdometerKm:
+      row.noted_odometer_km != null && row.noted_odometer_km !== ""
+        ? Number(row.noted_odometer_km)
+        : undefined,
+    repairItemId: rid != null && rid !== "" ? String(rid) : undefined,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
+    resolvedAt: resolvedRaw != null ? new Date(resolvedRaw).toISOString() : undefined,
+  };
+}
+
+async function resolveRepairItemIdFromSlug(slug: string | null | undefined): Promise<number | null> {
+  const s = slug != null ? String(slug).trim() : "";
+  if (!s) return null;
+  try {
+    const rows = await fetchRepairCatalogRows();
+    const id = rowsToSlugIdMap(rows).get(s);
+    return id != null && !Number.isNaN(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+function sortVehicleIssues(a: VehicleIssue, b: VehicleIssue): number {
+  return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+}
+
 async function fetchRowsForVehicles(
   routeList: string,
   vehicleIds: number[]
@@ -329,20 +420,24 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
   const [odometerLogs, setOdometerLogs] = useState<OdometerLog[]>([]);
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
+  const [vehicleIssues, setVehicleIssues] = useState<VehicleIssue[]>([]);
   const [lastChecks, setLastChecks] = useState<LastCheck[]>([]);
   const [partRules, setPartRules] = useState<PartRule[]>([]);
   const [licenseDisks, setLicenseDisks] = useState<LicenseDisk[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [ownershipMap, setOwnershipMap] = useState<Map<string, 'own' | 'fleet'>>(new Map());
+  const [isFleetMode, setIsFleetMode] = useState(false);
 
   useEffect(() => {
     (async () => {
       const userId = useAuthStore.getState().user_id;
 
-      const [activeId, odo, fuel, svc, checks, rules, disks] = await Promise.all([
+      const [activeId, odo, fuel, svc, issues, checks, rules, disks] = await Promise.all([
         load<string | null>(STORAGE_KEYS.activeVehicleId, null),
         load<OdometerLog[]>(STORAGE_KEYS.odometerLogs, []),
         load<FuelLog[]>(STORAGE_KEYS.fuelLogs, []),
         load<ServiceLog[]>(STORAGE_KEYS.serviceLogs, []),
+        load<VehicleIssue[]>(STORAGE_KEYS.vehicleIssues, []),
         load<LastCheck[]>(STORAGE_KEYS.lastChecks, []),
         load<PartRule[]>(STORAGE_KEYS.partRules, []),
         load<LicenseDisk[]>(STORAGE_KEYS.licenseDisks, []),
@@ -351,6 +446,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       let nextOdo = odo;
       let nextFuel = fuel;
       let nextSvc = svc;
+      let nextIssues = issues;
       let nextChecks = checks;
       let nextRules = rules;
       let nextDisks = disks;
@@ -358,23 +454,67 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
 
       if (userId) {
         try {
-          const res = await skaftinClient.post<Record<string, any>[]>(routes.vehicles.list, {
-            where: { user_id: userId, is_active: true },
-          });
-          const rawVehicles = Array.isArray(res.data) ? res.data : [];
-          nextVehicles = rawVehicles.map(dbRowToVehicle);
-          const vidNums = rawVehicles.map((r) => r.id as number);
+          // Resolve organisation membership (sets organisation_id in AuthStore if found)
+          const userIsPro = useAuthStore.getState().isPro();
+          const resolvedOrgId = await organisationService.resolveOrganisationId(userId, userIsPro);
+          if (resolvedOrgId != null) {
+            useAuthStore.getState().setOrganisationId(resolvedOrgId);
+          }
+
+          // Determine which user IDs to load vehicles for
+          let memberUserIds: number[] = [userId];
+          let fleet = false;
+          if (userIsPro && resolvedOrgId != null) {
+            try {
+              const approvedReqs = await skaftinClient.post<Record<string, any>[]>(
+                routes.orgJoinRequests.list,
+                { where: { organisation_id: resolvedOrgId, status: 'approved' } }
+              );
+              const memberIds = Array.isArray(approvedReqs.data)
+                ? approvedReqs.data.map((r) => Number(r.user_id)).filter(Boolean)
+                : [];
+              memberUserIds = [userId, ...memberIds.filter((id) => id !== userId)];
+              fleet = memberUserIds.length > 1;
+            } catch {
+              /* fall back to single-user load */
+            }
+          }
+          setIsFleetMode(fleet);
+
+          // Fetch vehicles for all member user IDs in parallel
+          const vehicleResponses = await Promise.all(
+            memberUserIds.map((uid) =>
+              skaftinClient.post<Record<string, any>[]>(routes.vehicles.list, {
+                where: { user_id: uid, is_active: true },
+              })
+            )
+          );
+          const allRawVehicles = vehicleResponses.flatMap((r) =>
+            Array.isArray(r.data) ? r.data : []
+          );
+          nextVehicles = allRawVehicles.map(dbRowToVehicle);
+
+          // Build ownership map
+          const newOwnershipMap = new Map<string, 'own' | 'fleet'>();
+          for (const v of nextVehicles) {
+            newOwnershipMap.set(v.id, v.userId === String(userId) ? 'own' : 'fleet');
+          }
+          setOwnershipMap(newOwnershipMap);
+
+          const vidNums = allRawVehicles.map((r) => r.id as number);
 
           if (vidNums.length > 0) {
             try {
-              const [odoRows, fuelRows, svcRows, repRows, checkRows, ruleRows] = await Promise.all([
-                fetchRowsForVehicles(routes.maintenance.odometerLogs.list, vidNums),
-                fetchRowsForVehicles(routes.maintenance.fuelLogs.list, vidNums),
-                fetchRowsForVehicles(routes.maintenance.serviceLogs.list, vidNums),
-                fetchRowsForVehicles(routes.maintenance.repairLogs.list, vidNums),
-                fetchRowsForVehicles(routes.maintenance.vehicleChecks.list, vidNums),
-                fetchRowsForVehicles(routes.maintenance.partsLifeRules.list, vidNums),
-              ]);
+              const [odoRows, fuelRows, svcRows, repRows, checkRows, ruleRows, issueRows] =
+                await Promise.all([
+                  fetchRowsForVehicles(routes.maintenance.odometerLogs.list, vidNums),
+                  fetchRowsForVehicles(routes.maintenance.fuelLogs.list, vidNums),
+                  fetchRowsForVehicles(routes.maintenance.serviceLogs.list, vidNums),
+                  fetchRowsForVehicles(routes.maintenance.repairLogs.list, vidNums),
+                  fetchRowsForVehicles(routes.maintenance.vehicleChecks.list, vidNums),
+                  fetchRowsForVehicles(routes.maintenance.partsLifeRules.list, vidNums),
+                  fetchRowsForVehicles(routes.maintenance.vehicleIssues.list, vidNums),
+                ]);
               nextOdo = odoRows.map(rowToOdometerLog).sort(
                 (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
               );
@@ -388,6 +528,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
               nextSvc = svcMapped;
               nextChecks = buildLastChecksFromRows(checkRows);
               nextRules = ruleRows.map(rowToPartRule);
+              nextIssues = issueRows.map(rowToVehicleIssue).sort(sortVehicleIssues);
               nextDisks = mergeLicenseDisks(rawVehicles, disks);
             } catch {
               /* keep cached log state */
@@ -409,6 +550,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       setOdometerLogs(nextOdo);
       setFuelLogs(nextFuel);
       setServiceLogs(nextSvc);
+      setVehicleIssues(nextIssues);
       setLastChecks(nextChecks);
       setPartRules(nextRules);
       setLicenseDisks(nextDisks);
@@ -416,6 +558,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         save(STORAGE_KEYS.odometerLogs, nextOdo),
         save(STORAGE_KEYS.fuelLogs, nextFuel),
         save(STORAGE_KEYS.serviceLogs, nextSvc),
+        save(STORAGE_KEYS.vehicleIssues, nextIssues),
         save(STORAGE_KEYS.lastChecks, nextChecks),
         save(STORAGE_KEYS.partRules, nextRules),
         save(STORAGE_KEYS.licenseDisks, nextDisks),
@@ -429,11 +572,12 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
     const vidNums = vehicles.map((v) => Number(v.id)).filter(Boolean);
     if (vidNums.length === 0) return;
     try {
-      const [odoRows, fuelRows, svcRows, repRows] = await Promise.all([
+      const [odoRows, fuelRows, svcRows, repRows, issueRows] = await Promise.all([
         fetchRowsForVehicles(routes.maintenance.odometerLogs.list, vidNums),
         fetchRowsForVehicles(routes.maintenance.fuelLogs.list, vidNums),
         fetchRowsForVehicles(routes.maintenance.serviceLogs.list, vidNums),
         fetchRowsForVehicles(routes.maintenance.repairLogs.list, vidNums),
+        fetchRowsForVehicles(routes.maintenance.vehicleIssues.list, vidNums),
       ]);
       const nextOdo = odoRows.map(rowToOdometerLog).sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -445,13 +589,16 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         ...svcRows.map((r) => rowToServiceLog(r, "service")),
         ...repRows.map((r) => rowToServiceLog(r, "repair")),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const nextIssues = issueRows.map(rowToVehicleIssue).sort(sortVehicleIssues);
       setOdometerLogs(nextOdo);
       setFuelLogs(nextFuel);
       setServiceLogs(nextSvc);
+      setVehicleIssues(nextIssues);
       await Promise.all([
         save(STORAGE_KEYS.odometerLogs, nextOdo),
         save(STORAGE_KEYS.fuelLogs, nextFuel),
         save(STORAGE_KEYS.serviceLogs, nextSvc),
+        save(STORAGE_KEYS.vehicleIssues, nextIssues),
       ]);
     } catch {
       /* keep existing data on failure */
@@ -463,8 +610,23 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
     save(STORAGE_KEYS.activeVehicleId, v.id);
   }, []);
 
+  const vehicleOwnership = useCallback((vehicleId: string): 'own' | 'fleet' => {
+    return ownershipMap.get(vehicleId) ?? 'own';
+  }, [ownershipMap]);
+
   const addVehicle = useCallback(async (data: Omit<Vehicle, "id" | "createdAt">): Promise<boolean> => {
-    if (vehicles.length >= FREE_TIER_LIMIT) return false;
+    const authState = useAuthStore.getState();
+    const userIsPro = authState.isPro();
+    const orgId = authState.user?.organisation_id;
+    if (userIsPro && orgId != null) {
+      // Fleet mode: check tier limit against own vehicles only
+      const org = await organisationService.fetchOwnedOrganisation(authState.user_id);
+      const tierLimit = org ? ORG_TIER_LIMITS[org.tier] : FREE_TIER_LIMIT;
+      const ownVehicles = vehicles.filter((v) => vehicleOwnership(v.id) === 'own');
+      if (tierLimit !== null && ownVehicles.length >= tierLimit) return false;
+    } else {
+      if (vehicles.length >= FREE_TIER_LIMIT) return false;
+    }
     const userId = useAuthStore.getState().user_id;
     try {
       const res = await skaftinClient.post<Record<string, any>>(routes.vehicles.create, {
@@ -485,6 +647,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       const newVehicle = dbRowToVehicle(res.data);
       const updated = [...vehicles, newVehicle];
       setVehicles(updated);
+      setOwnershipMap((prev) => new Map(prev).set(newVehicle.id, 'own'));
       if (!activeVehicle) {
         setActiveVehicleState(newVehicle);
         await save(STORAGE_KEYS.activeVehicleId, newVehicle.id);
@@ -493,7 +656,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
     } catch {
       return false;
     }
-  }, [vehicles, activeVehicle]);
+  }, [vehicles, activeVehicle, vehicleOwnership]);
 
   const updateVehicle = useCallback(
     async (id: string, data: Partial<Vehicle>) => {
@@ -560,12 +723,14 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       const updatedChecks = lastChecks.filter((l) => l.vehicleId !== id);
       const updatedRules = partRules.filter((l) => l.vehicleId !== id);
       const updatedDisks = licenseDisks.filter((l) => l.vehicleId !== id);
+      const updatedIssues = vehicleIssues.filter((l) => l.vehicleId !== id);
       setOdometerLogs(updatedOdo);
       setFuelLogs(updatedFuel);
       setServiceLogs(updatedSvc);
       setLastChecks(updatedChecks);
       setPartRules(updatedRules);
       setLicenseDisks(updatedDisks);
+      setVehicleIssues(updatedIssues);
       await Promise.all([
         save(STORAGE_KEYS.odometerLogs, updatedOdo),
         save(STORAGE_KEYS.fuelLogs, updatedFuel),
@@ -573,9 +738,20 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         save(STORAGE_KEYS.lastChecks, updatedChecks),
         save(STORAGE_KEYS.partRules, updatedRules),
         save(STORAGE_KEYS.licenseDisks, updatedDisks),
+        save(STORAGE_KEYS.vehicleIssues, updatedIssues),
       ]);
     },
-    [vehicles, activeVehicle, odometerLogs, fuelLogs, serviceLogs, lastChecks, partRules, licenseDisks]
+    [
+      vehicles,
+      activeVehicle,
+      odometerLogs,
+      fuelLogs,
+      serviceLogs,
+      lastChecks,
+      partRules,
+      licenseDisks,
+      vehicleIssues,
+    ]
   );
 
   const addOdometerLog = useCallback(
@@ -656,35 +832,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
             const newRepairLogId = Number((res.data as Record<string, any>).id);
             const selected = (log.selectedRepairItemSlugs ?? []).filter(Boolean);
             if (!Number.isNaN(newRepairLogId) && selected.length > 0) {
-              const slugRows = await Promise.all(
-                selected.map(async (slug) => {
-                  try {
-                    const itemRes = await skaftinClient.post<Record<string, any>[]>(
-                      routes.reference.repairItems.list,
-                      { where: { slug } }
-                    );
-                    return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
-                  } catch {
-                    return null;
-                  }
-                })
-              );
-              const itemIds = [...new Set(
-                slugRows
-                  .map((row) => (row && row.id != null ? Number(row.id) : NaN))
-                  .filter((id) => !Number.isNaN(id))
-              )];
-              if (itemIds.length > 0) {
-                await Promise.all(
-                  itemIds.map((repair_item_id) =>
-                    skaftinClient
-                      .post(routes.maintenance.repairLogItems.create, {
-                        data: { repair_log_id: newRepairLogId, repair_item_id },
-                      })
-                      .catch(() => null)
-                  )
-                );
-              }
+              await syncRepairLogJunction(newRepairLogId, selected);
             }
           }
         } else {
@@ -705,35 +853,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
             const newServiceLogId = Number((res.data as Record<string, any>).id);
             const selected = (log.selectedServiceItemSlugs ?? []).filter(Boolean);
             if (!Number.isNaN(newServiceLogId) && selected.length > 0) {
-              const slugRows = await Promise.all(
-                selected.map(async (slug) => {
-                  try {
-                    const itemRes = await skaftinClient.post<Record<string, any>[]>(
-                      routes.reference.serviceItems.list,
-                      { where: { slug } }
-                    );
-                    return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
-                  } catch {
-                    return null;
-                  }
-                })
-              );
-              const itemIds = [...new Set(
-                slugRows
-                  .map((row) => (row && row.id != null ? Number(row.id) : NaN))
-                  .filter((id) => !Number.isNaN(id))
-              )];
-              if (itemIds.length > 0) {
-                await Promise.all(
-                  itemIds.map((service_item_id) =>
-                    skaftinClient
-                      .post(routes.maintenance.serviceLogItems.create, {
-                        data: { service_log_id: newServiceLogId, service_item_id },
-                      })
-                      .catch(() => null)
-                  )
-                );
-              }
+              await syncServiceLogJunction(newServiceLogId, selected);
             }
           }
         }
@@ -794,43 +914,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
               where: { id: numericId },
             });
             if (selectedRepairItemSlugs !== undefined) {
-              try {
-                await skaftinClient.delete(routes.maintenance.repairLogItems.delete, {
-                  where: { repair_log_id: numericId },
-                });
-              } catch {
-                /* still try inserts */
-              }
-              const selected = selectedRepairItemSlugs.filter(Boolean);
-              if (selected.length > 0) {
-                const slugRows = await Promise.all(
-                  selected.map(async (slug) => {
-                    try {
-                      const itemRes = await skaftinClient.post<Record<string, any>[]>(
-                        routes.reference.repairItems.list,
-                        { where: { slug } }
-                      );
-                      return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
-                    } catch {
-                      return null;
-                    }
-                  })
-                );
-                const itemIds = [...new Set(
-                  slugRows
-                    .map((row) => (row && row.id != null ? Number(row.id) : NaN))
-                    .filter((x) => !Number.isNaN(x))
-                )];
-                await Promise.all(
-                  itemIds.map((repair_item_id) =>
-                    skaftinClient
-                      .post(routes.maintenance.repairLogItems.create, {
-                        data: { repair_log_id: numericId, repair_item_id },
-                      })
-                      .catch(() => null)
-                  )
-                );
-              }
+              await syncRepairLogJunction(numericId, selectedRepairItemSlugs.filter(Boolean));
             }
           } else if (isService) {
             await skaftinClient.put(routes.maintenance.serviceLogs.update, {
@@ -845,43 +929,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
               where: { id: numericId },
             });
             if (selectedServiceItemSlugs !== undefined) {
-              try {
-                await skaftinClient.delete(routes.maintenance.serviceLogItems.delete, {
-                  where: { service_log_id: numericId },
-                });
-              } catch {
-                /* still try inserts */
-              }
-              const selected = selectedServiceItemSlugs.filter(Boolean);
-              if (selected.length > 0) {
-                const slugRows = await Promise.all(
-                  selected.map(async (slug) => {
-                    try {
-                      const itemRes = await skaftinClient.post<Record<string, any>[]>(
-                        routes.reference.serviceItems.list,
-                        { where: { slug } }
-                      );
-                      return Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data[0] : null;
-                    } catch {
-                      return null;
-                    }
-                  })
-                );
-                const itemIds = [...new Set(
-                  slugRows
-                    .map((row) => (row && row.id != null ? Number(row.id) : NaN))
-                    .filter((x) => !Number.isNaN(x))
-                )];
-                await Promise.all(
-                  itemIds.map((service_item_id) =>
-                    skaftinClient
-                      .post(routes.maintenance.serviceLogItems.create, {
-                        data: { service_log_id: numericId, service_item_id },
-                      })
-                      .catch(() => null)
-                  )
-                );
-              }
+              await syncServiceLogJunction(numericId, selectedServiceItemSlugs.filter(Boolean));
             }
           }
         } catch {
@@ -893,6 +941,131 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       await save(STORAGE_KEYS.serviceLogs, updated);
     },
     [serviceLogs]
+  );
+
+  const addVehicleIssue = useCallback(
+    async (issue: AddVehicleIssueInput) => {
+      const now = new Date().toISOString();
+      const repairItemIdNum = await resolveRepairItemIdFromSlug(issue.repairItemSlug ?? null);
+      let next: VehicleIssue = {
+        vehicleId: issue.vehicleId,
+        title: issue.title.trim(),
+        description: issue.description?.trim() || undefined,
+        status: issue.status,
+        notedOdometerKm: issue.notedOdometerKm,
+        repairItemId: repairItemIdNum != null ? String(repairItemIdNum) : undefined,
+        id: generateId(),
+        createdAt: now,
+        updatedAt: now,
+        resolvedAt: issue.status === "resolved" ? now : undefined,
+      };
+      try {
+        const res = await skaftinClient.post<Record<string, any>>(routes.maintenance.vehicleIssues.create, {
+          data: {
+            vehicle_id: parseInt(issue.vehicleId, 10),
+            title: issue.title.trim(),
+            description: issue.description?.trim() || null,
+            status: issue.status,
+            noted_odometer_km: issue.notedOdometerKm ?? null,
+            resolved_at: issue.status === "resolved" ? now : null,
+            repair_item_id: repairItemIdNum,
+          },
+        });
+        if (res.success && res.data) {
+          next = rowToVehicleIssue(res.data as Record<string, any>);
+        }
+      } catch {
+        /* local fallback id */
+      }
+      const updated = [...vehicleIssues, next].sort(sortVehicleIssues);
+      setVehicleIssues(updated);
+      await save(STORAGE_KEYS.vehicleIssues, updated);
+    },
+    [vehicleIssues]
+  );
+
+  const updateVehicleIssue = useCallback(
+    async (id: string, data: UpdateVehicleIssueInput) => {
+      const numericId = parseInt(id, 10);
+      const now = new Date().toISOString();
+      let resolvedRepairItemId: number | null | undefined;
+      if (data.repairItemSlug !== undefined) {
+        resolvedRepairItemId = await resolveRepairItemIdFromSlug(data.repairItemSlug);
+      }
+      if (!Number.isNaN(numericId)) {
+        try {
+          const patch: Record<string, any> = { updated_at: now };
+          if (data.title !== undefined) patch.title = data.title.trim();
+          if (data.description !== undefined) patch.description = data.description.trim() || null;
+          if (data.notedOdometerKm !== undefined) {
+            patch.noted_odometer_km = data.notedOdometerKm ?? null;
+          }
+          if (data.status !== undefined) {
+            patch.status = data.status;
+            patch.resolved_at = data.status === "resolved" ? (data.resolvedAt ?? now) : null;
+          } else if (data.resolvedAt !== undefined) {
+            patch.resolved_at = data.resolvedAt ?? null;
+          }
+          if (data.repairItemSlug !== undefined) {
+            patch.repair_item_id = resolvedRepairItemId;
+          } else if (data.repairItemId !== undefined) {
+            const raw = data.repairItemId;
+            patch.repair_item_id = raw != null && raw !== "" ? parseInt(raw, 10) : null;
+          }
+          await skaftinClient.put(routes.maintenance.vehicleIssues.update, {
+            data: patch,
+            where: { id: numericId },
+          });
+        } catch {
+          /* local update */
+        }
+      }
+      const updated = vehicleIssues
+        .map((x) => {
+          if (x.id !== id) return x;
+          const title = data.title !== undefined ? data.title.trim() : x.title;
+          const description =
+            data.description !== undefined ? data.description.trim() || undefined : x.description;
+          const status = data.status !== undefined ? data.status : x.status;
+          const notedOdometerKm =
+            data.notedOdometerKm !== undefined ? data.notedOdometerKm : x.notedOdometerKm;
+          let resolvedAt = x.resolvedAt;
+          if (data.status === "open") resolvedAt = undefined;
+          else if (data.status === "resolved") resolvedAt = data.resolvedAt ?? now;
+          else if (data.resolvedAt !== undefined) resolvedAt = data.resolvedAt;
+          let repairItemId = x.repairItemId;
+          if (data.repairItemSlug !== undefined) {
+            repairItemId =
+              resolvedRepairItemId != null ? String(resolvedRepairItemId) : undefined;
+          } else if (data.repairItemId !== undefined) {
+            repairItemId = data.repairItemId || undefined;
+          }
+          return { ...x, title, description, status, notedOdometerKm, resolvedAt, repairItemId, updatedAt: now };
+        })
+        .sort(sortVehicleIssues);
+      setVehicleIssues(updated);
+      await save(STORAGE_KEYS.vehicleIssues, updated);
+    },
+    [vehicleIssues]
+  );
+
+  const deleteVehicleIssue = useCallback(
+    async (id: string) => {
+      const numericId = parseInt(id, 10);
+      if (!Number.isNaN(numericId)) {
+        try {
+          await skaftinClient.delete(routes.maintenance.vehicleIssues.delete, {
+            where: { id: numericId },
+          });
+        } catch {
+          /* still remove locally */
+        }
+      }
+      const updated = vehicleIssues.filter((x) => x.id !== id);
+      setVehicleIssues(updated);
+      await save(STORAGE_KEYS.vehicleIssues, updated);
+    },
+    [vehicleIssues]
   );
 
   const updateFuelLog = useCallback(
@@ -950,11 +1123,8 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       const vid = parseInt(vehicleId, 10);
       if (Number.isNaN(vid) || !itemSlug.trim()) return null;
       try {
-        const itemRes = await skaftinClient.post<Record<string, any>[]>(
-          routes.reference.serviceItems.list,
-          { where: { slug: itemSlug.trim() } }
-        );
-        const itemRow = Array.isArray(itemRes.data) ? itemRes.data[0] : null;
+        const catalog = await fetchServiceCatalogRows();
+        const itemRow = catalog.find((r) => r.slug === itemSlug.trim());
         const itemId = itemRow?.id != null ? Number(itemRow.id) : NaN;
         if (Number.isNaN(itemId)) return null;
 
@@ -1141,7 +1311,10 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
       else data.license_expiry_date = null;
       if (diskNorm.engineNumber) data.license_engine_number = diskNorm.engineNumber;
       else data.license_engine_number = null;
-      data.license_fees = diskNorm.fees != null ? Math.round(diskNorm.fees) : null;
+      data.license_fees =
+        diskNorm.fees != null && !Number.isNaN(Number(diskNorm.fees))
+          ? Number(Number(diskNorm.fees).toFixed(2))
+          : null;
       if (diskNorm.dateOfTest) data.license_test_date = diskNorm.dateOfTest.slice(0, 10);
       else data.license_test_date = null;
       const diskNo = diskNorm.licenseNo || diskNorm.licenseNumber;
@@ -1227,6 +1400,7 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         odometerLogs,
         fuelLogs,
         serviceLogs,
+        vehicleIssues,
         lastChecks,
         partRules,
         setActiveVehicle,
@@ -1238,6 +1412,9 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         addServiceLog,
         deleteServiceLog,
         updateServiceLog,
+        addVehicleIssue,
+        updateVehicleIssue,
+        deleteVehicleIssue,
         getLatestServiceLogForItem,
         deleteFuelLog,
         updateFuelLog,
@@ -1251,6 +1428,8 @@ export function VehicleProvider({ children }: { children: React.ReactNode }) {
         getEfficiencyMetrics,
         refreshLogs,
         FREE_TIER_LIMIT,
+        isFleetMode,
+        vehicleOwnership,
       }}
     >
       {children}

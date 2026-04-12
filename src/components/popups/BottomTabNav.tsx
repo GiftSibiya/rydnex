@@ -6,8 +6,8 @@ import Animated, {
   useAnimatedStyle, withSpring, useSharedValue, withTiming,
 } from 'react-native-reanimated'
 import { BottomTabStateStore } from '@/stores/StoresIndex'
-import { useAppTheme } from '@/theme/AppTheme'
-import { AppThemeColors } from '@/theme/theme'
+import { useAppTheme } from '@/themes/AppTheme'
+import { AppThemeColors } from '@/themes/theme'
 
 const { width: screenWidth, height } = Dimensions.get('window')
 

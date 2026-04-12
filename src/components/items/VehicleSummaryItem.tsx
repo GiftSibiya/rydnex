@@ -6,6 +6,7 @@ import { STATUS_BG, STATUS_COLOR, STATUS_LABEL } from "@/constants/Constants";
 import { LastCheck, LicenseDisk, PartRule, Vehicle } from "@/contexts/VehicleContext";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
+import { formatExpiryDisplay } from "@/utilities/licenseDiskDate";
 
 const CHECK_FIELDS = ["oil", "tyrePressure", "coolant", "spareWheel", "lights"] as const;
 
@@ -115,13 +116,21 @@ export default function VehicleSummaryItem({
 
         {/* Make / model info */}
         <View style={styles.cardInfo}>
-          <Text style={[styles.cardMake, isSmall && styles.cardMakeSmall]} numberOfLines={1}>
+          <Text
+            style={[styles.cardMake, isSmall && styles.cardMakeSmall, styles.upperText]}
+            numberOfLines={1}
+          >
             {v.year} {v.make}
           </Text>
-          <Text style={[styles.cardModel, isSmall && styles.cardModelSmall]} numberOfLines={1}>
+          <Text
+            style={[styles.cardModel, isSmall && styles.cardModelSmall, styles.upperText]}
+            numberOfLines={1}
+          >
             {v.model}{v.trim ? ` ${v.trim}` : ""}
           </Text>
-          {!isSmall && v.color ? <Text style={styles.cardColor}>{v.color}</Text> : null}
+          {!isSmall && v.color ? (
+            <Text style={[styles.cardColor, styles.upperText]}>{v.color}</Text>
+          ) : null}
         </View>
 
         {/* Status badge */}
@@ -139,14 +148,18 @@ export default function VehicleSummaryItem({
       {/* Stats row */}
       <View style={[styles.statsRow, isSmall && styles.statsRowSmall]}>
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Odometer</Text>
+          <Text style={styles.statLabel}>Odometer (km)</Text>
           <Text style={[styles.statValue, isSmall && styles.statValueSmall]}>{v.currentOdometer.toLocaleString()}</Text>
-          <Text style={styles.statUnit}>km</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Registration</Text>
-          <Text style={[styles.statValue, isSmall && styles.statValueSmall]} numberOfLines={1}>{v.registration || "—"}</Text>
+          <Text style={styles.statLabel}>License No</Text>
+          <Text
+            style={[styles.statValue, isSmall && styles.statValueSmall, styles.upperText]}
+            numberOfLines={1}
+          >
+            {(disk?.licenseNo || v.registration || "—").toUpperCase()}
+          </Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
@@ -174,10 +187,13 @@ export default function VehicleSummaryItem({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.statusItemLabel}>Next Service</Text>
-                <Text style={[
+                <Text
+                  style={[
                   styles.statusItemValue,
+                  styles.upperText,
                   nextSvc && nextSvc.kmLeft <= 0 && { color: C.danger },
-                ]}>
+                ]}
+                >
                   {nextSvc
                     ? nextSvc.kmLeft <= 0
                       ? `${nextSvc.name} — Overdue`
@@ -202,17 +218,20 @@ export default function VehicleSummaryItem({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.statusItemLabel}>License Disk</Text>
-                <Text style={[
+                <Text
+                  style={[
                   styles.statusItemValue,
+                  styles.upperText,
                   diskExpired && { color: C.danger },
                   diskSoon && !diskExpired && { color: C.warning },
-                ]}>
+                ]}
+                >
                   {disk
                     ? diskExpired
                       ? "Expired"
                       : diskSoon
                       ? `Expires in ${diskDays} day${diskDays !== 1 ? "s" : ""}`
-                      : `Valid · expires ${disk.expiryDate}`
+                      : `Valid · expires ${formatExpiryDisplay(disk.expiryDate)}`
                     : "Not captured"}
                 </Text>
               </View>
@@ -232,10 +251,13 @@ export default function VehicleSummaryItem({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.statusItemLabel}>Health Checks</Text>
-                <Text style={[
+                <Text
+                  style={[
                   styles.statusItemValue,
+                  styles.upperText,
                   overdueChecks.length > 0 && { color: C.warning },
-                ]}>
+                ]}
+                >
                   {overdueChecks.length === 0
                     ? "All checks up to date"
                     : `${overdueChecks.length} check${overdueChecks.length > 1 ? "s" : ""} overdue`}
@@ -377,6 +399,7 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
   statValue: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center" },
   statValueSmall: { fontSize: 12 },
   statUnit: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 1 },
+  upperText: { textTransform: "uppercase" },
 
   // Status items (full only)
   statusItems: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, gap: 10 },

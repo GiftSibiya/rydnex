@@ -23,6 +23,47 @@ export type AuthUser = {
   phone?: string;
   last_name?: string;
   roles?: AuthUserRole[];
+  organisation_id?: number | null;
+};
+
+export type OrgTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+export const ORG_TIER_LIMITS: Record<OrgTier, number | null> = {
+  bronze: 10,
+  silver: 50,
+  gold: 100,
+  platinum: null,
+};
+
+export type Organisation = {
+  id: number;
+  name: string;
+  owner_user_id: number;
+  join_code: string;
+  tier: OrgTier;
+  vehicle_limit: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type OrgJoinRequest = {
+  id: number;
+  organisation_id: number;
+  user_id: number;
+  user_name?: string;
+  user_email?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at?: string;
+  updated_at?: string;
+};
+
+/** Roster entry for profile / org admin (owner + approved drivers). */
+export type OrganisationMemberDisplay = {
+  user_id: number;
+  user_name?: string;
+  user_email?: string;
+  role: 'admin' | 'driver';
+  member_since?: string;
 };
 
 export type LoginResponseData = {

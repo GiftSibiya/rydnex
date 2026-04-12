@@ -52,10 +52,16 @@ function RootLayoutNav() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="register" options={{ headerShown: false }} />
-      <Stack.Screen name="register-otp" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/login-screen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/register-screen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/RegistrationScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/RegistrationOtpScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/register-otp-screen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/SplashScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/forgot-password-screen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/forgot-password-otp-screen" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/forgot-password-reset-screen" options={{ headerShown: false }} />
       <Stack.Screen name="reminders" options={{ title: "Reminders" }} />
       <Stack.Screen name="service-details" options={{ title: "Service Details" }} />
       <Stack.Screen name="log/fuel" options={{ title: "Fuel Log", presentation: "modal" }} />
@@ -64,8 +70,17 @@ function RootLayoutNav() {
       <Stack.Screen name="log/subpages/logbook-item-page" options={{ headerShown: false }} />
       <Stack.Screen name="log/subpages/logbook-item-edit-page" options={{ headerShown: false }} />
       <Stack.Screen name="garage/vehicle-details-page" options={{ headerShown: false }} />
+      <Stack.Screen name="garage/organisation-vehicle-details" options={{ headerShown: false }} />
+      <Stack.Screen name="garage/organisation-vehicle-logbook" options={{ headerShown: false }} />
       <Stack.Screen name="garage/vehicle-edit-page" options={{ headerShown: false }} />
+      <Stack.Screen name="garage/vehicle-issues" options={{ headerShown: false }} />
+      <Stack.Screen name="garage/vehicle-issue-edit" options={{ headerShown: false }} />
       <Stack.Screen name="account/editAccountScreen" options={{ title: "Edit Account", presentation: "modal" }} />
+      <Stack.Screen name="organisation/create-organisation" options={{ title: "Create Organisation", presentation: "modal" }} />
+      <Stack.Screen name="organisation/edit-organisation" options={{ title: "Edit Organisation" }} />
+      <Stack.Screen name="organisation/join-organisation" options={{ title: "Join Organisation", presentation: "modal" }} />
+      <Stack.Screen name="organisation/organisation-requests" options={{ title: "Organisation Requests" }} />
+      <Stack.Screen name="organisation/organisation-members" options={{ title: "Organisation Members" }} />
     </Stack>
   );
 }

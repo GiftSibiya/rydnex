@@ -27,3 +27,5 @@ See [`routes.reference.serviceItems`](../../src/constants/ApiRoutes.ts).
 [`ServiceLogScreen`](../../src/pages/home/log/service.tsx) composes ticked item names plus optional free text into `service_logs.description` via `buildServiceDescriptionFromSelection`.
 
 Selected checklist items are also persisted in `service_logs_items` (`service_log_id` + `service_item_id`) so item-based lookups (for example "last time oil filter was serviced") do not need to parse description text.
+
+The app resolves slugs to `service_item_id` with a **single** `service_items` select (plus cached rows for ~5 minutes) in [`logCatalogLinks.ts`](../../src/backend/maintenance/logCatalogLinks.ts), instead of one select per slug. Repair logs use the same pattern for `repair_items` / `repair_logs_items`.

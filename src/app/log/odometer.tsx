@@ -1,8 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import GoldButton from "@/components/buttons/GoldButton";
 import LuxInput from "@/components/forms/LuxInput";
 import { useVehicle } from "@/contexts/VehicleContext";
@@ -49,52 +48,55 @@ export default function OdometerLogScreen() {
   };
 
   return (
-    <KeyboardAwareScrollView
+    <KeyboardAvoidingView
       style={styles.screen}
-      contentContainerStyle={styles.content}
-      bottomOffset={20}
-      keyboardShouldPersistTaps="handled"
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.iconRow}>
-        <View style={styles.icon}>
-          <Feather name="activity" size={28} color={C.success} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.iconRow}>
+          <View style={styles.icon}>
+            <Feather name="activity" size={28} color={C.success} />
+          </View>
+          <Text style={styles.title}>Odometer Reading</Text>
+          <Text style={styles.sub}>Previous: {prev.toLocaleString()} km</Text>
         </View>
-        <Text style={styles.title}>Odometer Reading</Text>
-        <Text style={styles.sub}>Previous: {prev.toLocaleString()} km</Text>
-      </View>
 
-      {diff > 0 && (
-        <View style={styles.diffBanner}>
-          <Feather name="navigation" size={14} color={C.success} />
-          <Text style={styles.diffText}>+{diff.toLocaleString()} km since last reading</Text>
+        {diff > 0 && (
+          <View style={styles.diffBanner}>
+            <Feather name="navigation" size={14} color={C.success} />
+            <Text style={styles.diffText}>+{diff.toLocaleString()} km since last reading</Text>
+          </View>
+        )}
+
+        <View style={styles.form}>
+          <LuxInput
+            label="New Odometer Reading (km)"
+            placeholder={String(prev)}
+            value={form.reading}
+            onChangeText={(t) => setForm(f => ({ ...f, reading: t }))}
+            keyboardType="numeric"
+            error={errors.reading}
+          />
+          <LuxInput
+            label="Date"
+            placeholder="YYYY-MM-DD"
+            value={form.date}
+            onChangeText={(t) => setForm(f => ({ ...f, date: t }))}
+          />
+          <LuxInput
+            label="Note (optional)"
+            placeholder="e.g. Before long trip"
+            value={form.note}
+            onChangeText={(t) => setForm(f => ({ ...f, note: t }))}
+          />
         </View>
-      )}
 
-      <View style={styles.form}>
-        <LuxInput
-          label="New Odometer Reading (km)"
-          placeholder={String(prev)}
-          value={form.reading}
-          onChangeText={(t) => setForm(f => ({ ...f, reading: t }))}
-          keyboardType="numeric"
-          error={errors.reading}
-        />
-        <LuxInput
-          label="Date"
-          placeholder="YYYY-MM-DD"
-          value={form.date}
-          onChangeText={(t) => setForm(f => ({ ...f, date: t }))}
-        />
-        <LuxInput
-          label="Note (optional)"
-          placeholder="e.g. Before long trip"
-          value={form.note}
-          onChangeText={(t) => setForm(f => ({ ...f, note: t }))}
-        />
-      </View>
-
-      <GoldButton label="Save Reading" onPress={handleSave} loading={loading} />
-    </KeyboardAwareScrollView>
+        <GoldButton label="Save Reading" onPress={handleSave} loading={loading} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

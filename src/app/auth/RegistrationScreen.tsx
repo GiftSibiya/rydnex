@@ -21,6 +21,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { FONT_FAMILY } from '@/constants/Fonts';
 import { authService } from '@/backend';
 import { AuthStore, ToastStateStore } from '@/stores/StoresIndex';
+import {
+  clearPendingRegistrationLogin,
+  setPendingRegistrationLogin,
+} from '@/utilities/registrationPendingLogin';
 
 const C = {
   bg: '#F5F4EE',
@@ -52,6 +56,10 @@ const RegistrationScreen = () => {
   const formOpacity = useSharedValue(0);
   const formY = useSharedValue(28);
   const footerOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    clearPendingRegistrationLogin();
+  }, []);
 
   useEffect(() => {
     decoOpacity.value = withTiming(1, { duration: 1000, easing: Easing.out(Easing.cubic) });
@@ -91,14 +99,15 @@ const RegistrationScreen = () => {
         return;
       }
 
-      if (response.data) {
-        setAuthFromRegistration(response.data);
-        showToast({ message: response.message ?? 'Account created successfully.', type: 'success' });
+      if ('requiresOtp' in response && response.requiresOtp && response.userId) {
+        setPendingRegistrationLogin({ email: response.email ?? email.trim(), password });
+        navigation.navigate('RegistrationOtp', { userId: response.userId, email: response.email ?? email.trim() });
         return;
       }
 
-      if (response.requiresOtp && response.userId) {
-        navigation.navigate('RegistrationOtp', { userId: response.userId, email: response.email ?? email.trim() });
+      if (response.data) {
+        setAuthFromRegistration(response.data);
+        showToast({ message: response.message ?? 'Account created successfully.', type: 'success' });
         return;
       }
 

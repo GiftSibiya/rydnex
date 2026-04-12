@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -12,11 +13,17 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LuxCard from "@/components/elements/LuxCard";
+import UpgradeProModal from "@/components/popups/UpgradeProModal";
+import { organisationService } from "@/backend/services/OrganisationService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVehicle } from "@/contexts/VehicleContext";
+import useAuthStore from "@/stores/data/AuthStore";
 import ThemeStateStore, { ThemeMode } from "@/stores/state/ThemeStateStore";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
+import { OrgTier } from "@/types/Types";
+
+const PRO_AMBER = "#F59E0B";
 
 type ComingSoonItemProps = {
   icon: string;
@@ -49,13 +56,38 @@ function ComingSoonItem({ icon, title, description }: ComingSoonItemProps) {
 export default function ProfileScreen() {
   const { colors: C } = useAppTheme();
   const { vehicles, FREE_TIER_LIMIT } = useVehicle();
-  const { logout, userEmail, userName } = useAuth();
+  const { logout, userEmail, userName, isPro, isOrgAdmin, organisationId } = useAuth();
+  const userId = useAuthStore((s) => s.user_id);
   const [mode, setMode] = useState<ThemeMode>(() => ThemeStateStore.getState().mode);
+  const [showProModal, setShowProModal] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
+  const [joinCode, setJoinCode] = useState<string | null>(null);
   const styles = useMemo(() => createStyles(C), [C]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
+
+  // Load join code for pro admins who already have an org
+  useEffect(() => {
+    if (isOrgAdmin && organisationId) {
+      organisationService.fetchOwnedOrganisation(userId).then((org) => {
+        if (org) setJoinCode(org.join_code);
+      });
+    }
+  }, [isOrgAdmin, organisationId, userId]);
+
+  const handleUpgradeConfirm = async (tier: OrgTier) => {
+    setShowProModal(false);
+    setUpgrading(true);
+    const result = await organisationService.upgradeToPro();
+    setUpgrading(false);
+    if (!result.success) {
+      Alert.alert("Upgrade Failed", result.error ?? "Could not upgrade your account. Please try again.");
+      return;
+    }
+    router.push({ pathname: "/organisation/create-organisation", params: { tier } });
+  };
   const themeOptions: Array<{ value: ThemeMode; label: string; icon: keyof typeof Feather.glyphMap }> = [
     { value: "system", label: "System", icon: "smartphone" },
     { value: "light", label: "Light", icon: "sun" },
@@ -87,6 +119,7 @@ export default function ProfileScreen() {
   };
 
   return (
+    <>
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[styles.content, { paddingTop: topPad + 12, paddingBottom: bottomPad + 100 }]}
@@ -102,7 +135,7 @@ export default function ProfileScreen() {
           <View style={styles.accountInfo}>
             <Text style={styles.accountName}>{userName || userEmail || "Guest"}</Text>
             {userName ? <Text style={styles.accountEmail}>{userEmail}</Text> : null}
-            <Text style={styles.accountSub}>rydnex personal</Text>
+            <Text style={styles.accountSub}>{isPro ? "rydnex pro" : "rydnex personal"}</Text>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <TouchableOpacity
@@ -112,23 +145,30 @@ export default function ProfileScreen() {
             >
               <Feather name="edit-2" size={13} color={C.tint} />
             </TouchableOpacity>
-            <View style={styles.freeBadge}>
-              <Text style={styles.freeBadgeText}>FREE</Text>
+            {isPro ? (
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            ) : (
+              <View style={styles.freeBadge}>
+                <Text style={styles.freeBadgeText}>FREE</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        {!isPro && (
+          <View style={styles.usageMeter}>
+            <View style={styles.usageRow}>
+              <Text style={styles.usageLabel}>Vehicles</Text>
+              <Text style={styles.usageCount}>
+                {vehicles.length} / {FREE_TIER_LIMIT}
+              </Text>
+            </View>
+            <View style={styles.usageTrack}>
+              <View style={[styles.usageFill, { width: `${Math.min((vehicles.length / FREE_TIER_LIMIT) * 100, 100)}%` as any }]} />
             </View>
           </View>
-        </View>
-
-        <View style={styles.usageMeter}>
-          <View style={styles.usageRow}>
-            <Text style={styles.usageLabel}>Vehicles</Text>
-            <Text style={styles.usageCount}>
-              {vehicles.length} / {FREE_TIER_LIMIT}
-            </Text>
-          </View>
-          <View style={styles.usageTrack}>
-            <View style={[styles.usageFill, { width: `${(vehicles.length / FREE_TIER_LIMIT) * 100}%` as any }]} />
-          </View>
-        </View>
+        )}
       </LuxCard>
 
       <View style={styles.section}>
@@ -145,6 +185,105 @@ export default function ProfileScreen() {
             <Text style={styles.menuLabel}>Parts &amp; Service Reminders</Text>
             <Feather name="chevron-right" size={16} color={C.textSubtle} />
           </TouchableOpacity>
+        </LuxCard>
+      </View>
+
+      {/* Organisation Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Organisation</Text>
+        <LuxCard noPad>
+          {isOrgAdmin && organisationId ? (
+            // Pro admin with an org: show join code + requests
+            <>
+              {joinCode ? (
+                <View style={styles.menuItem}>
+                  <View style={styles.menuIcon}>
+                    <Feather name="key" size={16} color={C.tint} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.menuLabel}>Join Code</Text>
+                    <Text style={[styles.menuLabel, { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: 6, color: C.tint }]}>
+                      {joinCode}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/organisation/edit-organisation")}
+              >
+                <View style={styles.menuIcon}>
+                  <Feather name="edit-2" size={16} color={C.tint} />
+                </View>
+                <Text style={styles.menuLabel}>Edit Organisation</Text>
+                <Feather name="chevron-right" size={16} color={C.textSubtle} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/organisation/organisation-members")}
+              >
+                <View style={styles.menuIcon}>
+                  <Feather name="users" size={16} color={C.tint} />
+                </View>
+                <Text style={styles.menuLabel}>Organisation Members</Text>
+                <Feather name="chevron-right" size={16} color={C.textSubtle} />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/organisation/organisation-requests")}
+              >
+                <View style={styles.menuIcon}>
+                  <Feather name="inbox" size={16} color={C.tint} />
+                </View>
+                <Text style={styles.menuLabel}>Organisation Requests</Text>
+                <Feather name="chevron-right" size={16} color={C.textSubtle} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            // No org yet (pro without org, or free user): show create + link
+            <>
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.75}
+                onPress={() => setShowProModal(true)}
+                disabled={upgrading}
+              >
+                <View style={[styles.menuIcon, { backgroundColor: "rgba(245,158,11,0.08)" }]}>
+                  <Feather name="briefcase" size={16} color={PRO_AMBER} />
+                </View>
+                <Text style={[styles.menuLabel, { flex: 1 }]}>Create Fleet Organisation</Text>
+                {upgrading ? (
+                  <ActivityIndicator size="small" color={PRO_AMBER} />
+                ) : (
+                  <View style={styles.proInlineBadge}>
+                    <Text style={styles.proInlineBadgeText}>PRO</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/organisation/join-organisation")}
+              >
+                <View style={styles.menuIcon}>
+                  <Feather name="link" size={16} color={C.tint} />
+                </View>
+                <Text style={styles.menuLabel}>
+                  {organisationId ? "Linked to Organisation" : "Link to Organisation"}
+                </Text>
+                {!organisationId && (
+                  <Feather name="chevron-right" size={16} color={C.textSubtle} />
+                )}
+              </TouchableOpacity>
+            </>
+          )}
         </LuxCard>
       </View>
 
@@ -239,8 +378,17 @@ export default function ProfileScreen() {
         </LuxCard>
       </View>
 
-      <Text style={styles.version}>rydnex v1.0.0 · Free Tier</Text>
+      <Text style={styles.version}>
+        rydnex v1.0.0 · {isPro ? "Pro" : "Free Tier"}
+      </Text>
     </ScrollView>
+
+    <UpgradeProModal
+      visible={showProModal}
+      onClose={() => setShowProModal(false)}
+      onConfirm={handleUpgradeConfirm}
+    />
+    </>
   );
 }
 
@@ -287,6 +435,24 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     borderColor: "rgba(46,204,113,0.25)",
   },
   freeBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold", color: C.tint, letterSpacing: 0.5 },
+  proBadge: {
+    backgroundColor: "rgba(245,158,11,0.12)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.35)",
+  },
+  proBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold", color: PRO_AMBER, letterSpacing: 0.5 },
+  proInlineBadge: {
+    backgroundColor: "rgba(245,158,11,0.12)",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "rgba(245,158,11,0.3)",
+  },
+  proInlineBadgeText: { fontSize: 10, fontFamily: "Inter_700Bold", color: PRO_AMBER, letterSpacing: 0.5 },
   usageMeter: { gap: 8 },
   usageRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   usageLabel: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textMuted },

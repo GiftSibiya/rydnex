@@ -19,6 +19,8 @@ import SectionHeader from "@/components/layouts/SectionHeader";
 import { getCarLogo } from "@/constants/carLogos";
 import { useVehicle } from "@/contexts/VehicleContext";
 import { useAppTheme } from "@/themes/AppTheme";
+import { formatDecimal } from "@/utilities/formatDecimal";
+import { formatExpiryDisplay } from "@/utilities/licenseDiskDate";
 
 export default function vehicleDetailsPage() {
   const { colors: C } = useAppTheme();
@@ -32,6 +34,7 @@ export default function vehicleDetailsPage() {
     partRules,
     licenseDisk,
     deleteVehicle,
+    vehicleIssues,
   } = useVehicle();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -50,6 +53,9 @@ export default function vehicleDetailsPage() {
   const lastFuel = vFuels[0];
   const vRules = partRules.filter((r) => r.vehicleId === activeVehicle.id);
   const disk = licenseDisk(activeVehicle.id);
+  const openIssuesCount = vehicleIssues.filter(
+    (i) => i.vehicleId === activeVehicle.id && i.status === "open"
+  ).length;
 
   const overdueRules = vRules.filter((r) => {
     const kmSince = activeVehicle.currentOdometer - r.lastReplacedKm;
@@ -204,7 +210,12 @@ export default function vehicleDetailsPage() {
       letterSpacing: 0.5,
       marginBottom: 3,
     },
-    diskValue: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text },
+    diskValue: {
+      fontSize: 13,
+      fontFamily: "Inter_600SemiBold",
+      color: C.text,
+      textTransform: "uppercase",
+    },
     recentItem: {
       flexDirection: "row",
       alignItems: "center",
@@ -225,6 +236,36 @@ export default function vehicleDetailsPage() {
     recentTitle: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.text },
     recentSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
     recentCost: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.text },
+    issuesRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+    },
+    issuesRowLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+    issuesIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: "rgba(46,204,113,0.1)",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "rgba(46,204,113,0.2)",
+    },
+    issuesTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
+    issuesSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
+    issuesRowRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+    issuesBadge: {
+      minWidth: 24,
+      height: 24,
+      paddingHorizontal: 8,
+      borderRadius: 12,
+      backgroundColor: "rgba(243,156,18,0.2)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    issuesBadgeText: { fontSize: 12, fontFamily: "Inter_700Bold", color: C.warning },
   });
 
   const markCheck = (field: "oil" | "tyrePressure" | "coolant" | "spareWheel" | "lights") => {
@@ -347,6 +388,33 @@ export default function vehicleDetailsPage() {
         </View>
       </View>
 
+      {/* Issues backlog */}
+      <LuxCard style={styles.section}>
+        <TouchableOpacity
+          style={styles.issuesRow}
+          onPress={() => router.push("/garage/vehicle-issues")}
+          activeOpacity={0.75}
+        >
+          <View style={styles.issuesRowLeft}>
+            <View style={styles.issuesIcon}>
+              <Feather name="alert-circle" size={18} color={C.tint} />
+            </View>
+            <View>
+              <Text style={styles.issuesTitle}>Issues</Text>
+              <Text style={styles.issuesSub}>Things to check later</Text>
+            </View>
+          </View>
+          <View style={styles.issuesRowRight}>
+            {openIssuesCount > 0 ? (
+              <View style={styles.issuesBadge}>
+                <Text style={styles.issuesBadgeText}>{openIssuesCount}</Text>
+              </View>
+            ) : null}
+            <Feather name="chevron-right" size={18} color={C.textSubtle} />
+          </View>
+        </TouchableOpacity>
+      </LuxCard>
+
       {/* Service interval */}
       <LuxCard style={styles.section}>
         <SectionHeader title="Service Interval" action={{ label: "Details", onPress: () => router.push("/service-details") }} />
@@ -371,18 +439,33 @@ export default function vehicleDetailsPage() {
           />
           <View style={styles.diskRow}>
             <View style={styles.diskItem}>
-              <Text style={styles.diskLabel}>License No</Text>
-              <Text style={styles.diskValue}>{disk.licenseNo || "—"}</Text>
+              <Text style={styles.diskLabel}>Disk number</Text>
+              <Text style={styles.diskValue}>{(disk.licenseNumber || "—").toUpperCase()}</Text>
             </View>
             <View style={styles.diskItem}>
               <Text style={styles.diskLabel}>Expiry</Text>
-              <Text style={[styles.diskValue, disk.expiryDate && new Date(disk.expiryDate) < new Date() && { color: C.danger }]}>
-                {disk.expiryDate || "—"}
+              <Text
+                style={[
+                  styles.diskValue,
+                  disk.expiryDate && new Date(disk.expiryDate) < new Date() && { color: C.danger },
+                ]}
+              >
+                {disk.expiryDate ? formatExpiryDisplay(disk.expiryDate) : "—"}
               </Text>
             </View>
             <View style={styles.diskItem}>
-              <Text style={styles.diskLabel}>Register No</Text>
-              <Text style={styles.diskValue}>{disk.registerNumber || "—"}</Text>
+              <Text style={styles.diskLabel}>License No</Text>
+              <Text style={styles.diskValue}>{(disk.licenseNo || "—").toUpperCase()}</Text>
+            </View>
+          </View>
+          <View style={[styles.diskRow, { marginTop: 8 }]}>
+            <View style={styles.diskItem}>
+              <Text style={styles.diskLabel}>Fees</Text>
+              <Text style={[styles.diskValue, { textTransform: "none" }]}>
+                {disk.fees != null && !Number.isNaN(Number(disk.fees))
+                  ? formatDecimal(Number(disk.fees), 2)
+                  : "—"}
+              </Text>
             </View>
           </View>
         </LuxCard>

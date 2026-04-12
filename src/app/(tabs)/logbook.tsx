@@ -2,24 +2,51 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState, useCallback } from "react";
 import {
-  FlatList,
   Platform,
   RefreshControl,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { FuelLog, OdometerLog, ServiceLog, useVehicle } from "@/contexts/VehicleContext";
+import { useVehicle } from "@/contexts/VehicleContext";
 import LogBookItem from "@/components/items/LogBookItem";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
+import {
+  buildLogbookItemPageParams,
+  logbookItemPagePath,
+  type LogBookListItem,
+} from "@/utilities/logbookItemNavigation";
 
-type LogItem =
-  | (ServiceLog & { _type: "service" })
-  | (FuelLog & { _type: "fuel" })
-  | (OdometerLog & { _type: "odometer" });
+type LogItem = LogBookListItem;
+
+type LogSection = { title: string; monthKey: string; data: LogItem[] };
+
+function groupLogsByMonth(items: LogItem[]): LogSection[] {
+  const byMonth = new Map<string, LogItem[]>();
+  for (const item of items) {
+    const d = new Date(item.date);
+    if (Number.isNaN(d.getTime())) continue;
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!byMonth.has(monthKey)) byMonth.set(monthKey, []);
+    byMonth.get(monthKey)!.push(item);
+  }
+  const keys = [...byMonth.keys()].sort((a, b) => b.localeCompare(a));
+  return keys.map((monthKey) => {
+    const [y, m] = monthKey.split("-").map(Number);
+    const title = new Date(y, m - 1, 1).toLocaleString("en-ZA", {
+      month: "long",
+      year: "numeric",
+    });
+    const data = [...(byMonth.get(monthKey) ?? [])].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    return { title, monthKey, data };
+  });
+}
 
 const FILTERS = ["All", "Service", "Fuel", "Odometer"] as const;
 
@@ -67,48 +94,13 @@ export default function LogbookScreen() {
     );
   }, [activeVehicle, serviceLogs, fuelLogs, odometerLogs, filter]);
 
+  const sections = useMemo(() => groupLogsByMonth(items), [items]);
+
   const navigateToItem = (item: LogItem) => {
-    if (item._type === "service") {
-      router.push({
-        pathname: "/log/subpages/logbook-item-page",
-        params: {
-          _type: "service",
-          id: item.id,
-          date: item.date,
-          type: item.type,
-          description: item.description,
-          cost: String(item.cost),
-          odometer: String(item.odometer),
-          ...(item.workshop ? { workshop: item.workshop } : {}),
-          ...(item.notes ? { notes: item.notes } : {}),
-        },
-      });
-    } else if (item._type === "fuel") {
-      router.push({
-        pathname: "/log/subpages/logbook-item-page",
-        params: {
-          _type: "fuel",
-          id: item.id,
-          date: item.date,
-          liters: String(item.liters),
-          costPerLiter: String(item.costPerLiter),
-          totalCost: String(item.totalCost),
-          odometer: String(item.odometer),
-          fullTank: String(item.fullTank),
-        },
-      });
-    } else {
-      router.push({
-        pathname: "/log/subpages/logbook-item-page",
-        params: {
-          _type: "odometer",
-          id: item.id,
-          date: item.date,
-          reading: String(item.reading),
-          ...(item.note ? { note: item.note } : {}),
-        },
-      });
-    }
+    router.push({
+      pathname: logbookItemPagePath(),
+      params: buildLogbookItemPageParams(item),
+    });
   };
 
   const getDeleteHandler = (item: LogItem) => {
@@ -186,9 +178,15 @@ export default function LogbookScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={items}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => `${item._type}-${item.id}`}
+          renderSectionHeader={({ section: { title } }) => (
+            <View style={styles.monthHeader}>
+              <Text style={styles.monthHeaderText}>{title}</Text>
+            </View>
+          )}
+          stickySectionHeadersEnabled
           renderItem={({ item }) => (
             <LogBookItem
               item={item}
@@ -263,5 +261,19 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
   emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
   emptyText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center" },
   list: { paddingHorizontal: 20, paddingTop: 8 },
+  monthHeader: {
+    backgroundColor: C.background,
+    paddingTop: 14,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: C.separator,
+  },
+  monthHeaderText: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: C.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
 });
 

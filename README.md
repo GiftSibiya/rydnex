@@ -14,9 +14,8 @@ Luxury-themed React Native vehicle information app built with Expo.
 
 ## Architecture
 
-- `App.tsx`: root providers and navigation bootstrap.
-- `src/navigation/RootNavigator.tsx`: auth flow and main tabs.
-- `src/features/*`: feature-first modules (auth, vehicles, maintenance, efficiency, reminders, logbook, profile).
+- **Expo Router** (`app/` layout, `package.json` `main`: `expo-router/entry`): primary navigation; root `index.ts` re-exports `expo-router/entry`.
+- `src/features/*`: screens still imported by some routes (e.g. profile, reminders); legacy React Navigation `RootNavigator` was removed in favor of Expo Router.
 - `src/backend/client/SkaftinClient.ts`: shared API client with auth header injection and retry-on-401.
 - `src/backend/repositories/VehicleRepository.ts`: typed data access for vehicle domain.
 - `src/stores/*`: auth/session and UI stores (zustand).
@@ -31,7 +30,7 @@ The app currently runs on local fixture data and does not require Skaftin for da
 - Typed fixture adapter: `src/fixtures/staticData.ts`
 - Repository implementation: `src/backend/repositories/VehicleRepository.ts`
 - Mock auth implementation: `src/backend/services/AuthService.ts`
-- Login behavior: sign-in uses local mock session and routes into `MainTabs`/Dashboard.
+- Login behavior: sign-in uses local mock session and routes into the Expo Router app shell.
 
 You can adjust vehicles/logs/checks/reminder starter data by editing these JSON files:
 

@@ -312,9 +312,12 @@ export default function ServiceLogScreen() {
     date: new Date().toISOString().slice(0, 10),
   });
   const [selectedServiceItems, setSelectedServiceItems] = useState<Record<string, boolean>>({});
-  const [expandedCategory, setExpandedCategory] = useState<ServiceItemCategoryId | null>(null);
+  /** Start with first category open so items are visible (tap headers to switch). */
+  const [expandedCategory, setExpandedCategory] = useState<ServiceItemCategoryId | null>("engine_fluids");
   const [selectedRepairItems, setSelectedRepairItems] = useState<Record<string, boolean>>({});
-  const [expandedRepairCategory, setExpandedRepairCategory] = useState<RepairItemCategoryId | null>(null);
+  const [expandedRepairCategory, setExpandedRepairCategory] = useState<RepairItemCategoryId | null>(
+    "engine_repair"
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
@@ -380,11 +383,16 @@ export default function ServiceLogScreen() {
             .filter(([, isSelected]) => Boolean(isSelected))
             .map(([slug]) => slug)
         : [];
+    const description =
+      type === "service"
+        ? buildServiceDescriptionFromSelection(selectedServiceItems, form.description)
+        : buildRepairDescriptionFromSelection(selectedRepairItems, form.description);
+
     await addServiceLog({
       vehicleId: activeVehicle.id,
       date: new Date(form.date).toISOString(),
       type,
-      description: form.description.trim() || "",
+      description: description.trim(),
       cost: Number(form.cost),
       odometer: Number(form.odometer),
       workshop: form.workshop.trim() || undefined,
@@ -433,6 +441,7 @@ export default function ServiceLogScreen() {
       {type === "service" && (
         <View style={styles.checklistSection}>
           <Text style={styles.checklistSectionTitle}>Select service items</Text>
+          <Text style={styles.checklistHint}>Tap a category to expand or collapse the checklist.</Text>
           {SERVICE_ITEM_CATALOG.map((category) => {
             const meta = CATEGORY_META[category.id];
             const selectedCount = category.items.filter((i) => selectedServiceItems[i.id]).length;
@@ -505,6 +514,7 @@ export default function ServiceLogScreen() {
       {type === "repair" && (
         <View style={styles.checklistSection}>
           <Text style={styles.checklistSectionTitle}>Select repair items</Text>
+          <Text style={styles.checklistHint}>Tap a category to expand or collapse the checklist.</Text>
           {REPAIR_ITEM_CATALOG.map((category) => {
             const meta = REPAIR_CATEGORY_META[category.id];
             const selectedCount = category.items.filter((i) => selectedRepairItems[i.id]).length;
@@ -566,11 +576,11 @@ export default function ServiceLogScreen() {
 
       <View style={styles.form}>
         <LuxInput
-          label="Description"
+          label="Extra detail (optional)"
           placeholder={
             type === "service"
-              ? "Additional detail (optional), or describe work if nothing is ticked above"
-              : "Additional detail (optional), or describe repair if nothing is ticked above"
+              ? "Appended after ticked items, or describe the work if you tick nothing above"
+              : "Appended after ticked items, or describe the repair if you tick nothing above"
           }
           value={form.description}
           onChangeText={(t) => setForm((f) => ({ ...f, description: t }))}
@@ -578,12 +588,16 @@ export default function ServiceLogScreen() {
           autoCapitalize="sentences"
         />
         {type === "service" && serviceDescriptionPreview.trim() ? (
-          <Text style={styles.previewLabel} numberOfLines={4}>
-          </Text>
+          <View style={styles.previewBlock}>
+            <Text style={styles.previewHeading}>Summary (saved with this entry)</Text>
+            <Text style={styles.previewLabel}>{serviceDescriptionPreview}</Text>
+          </View>
         ) : null}
         {type === "repair" && repairDescriptionPreview.trim() ? (
-          <Text style={styles.previewLabel} numberOfLines={4}>
-          </Text>
+          <View style={styles.previewBlock}>
+            <Text style={styles.previewHeading}>Summary (saved with this entry)</Text>
+            <Text style={styles.previewLabel}>{repairDescriptionPreview}</Text>
+          </View>
         ) : null}
         <LuxInput
           label="Cost (R)"
@@ -687,6 +701,13 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 4,
   },
+  checklistHint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: C.textSubtle,
+    marginBottom: 8,
+    marginTop: -4,
+  },
   categoryCard: {
     borderRadius: 12,
     borderWidth: 1,
@@ -754,11 +775,22 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: C.textSubtle,
   },
+  previewBlock: {
+    gap: 6,
+    marginTop: -4,
+  },
+  previewHeading: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: C.textSubtle,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   previewLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-    marginTop: -8,
+    color: C.text,
+    lineHeight: 19,
   },
   form: { gap: 14 },
   dateWrap: { gap: 6 },

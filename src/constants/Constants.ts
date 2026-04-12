@@ -310,6 +310,11 @@ export const REPAIR_ITEM_CATALOG: RepairCatalogCategory[] = [
       { id: "turbocharger", name: "Turbocharger" },
       { id: "egr_valve", name: "EGR valve" },
       { id: "oil_leak_repair", name: "Oil leak repair" },
+      { id: "coolant_pipes", name: "Coolant pipes / hoses" },
+      { id: "coolant_reservoir", name: "Coolant reservoir" },
+      { id: "radiator", name: "Radiator (leak / replace)" },
+      { id: "water_pump", name: "Water pump" },
+      { id: "thermostat", name: "Thermostat" },
     ],
   },
   {

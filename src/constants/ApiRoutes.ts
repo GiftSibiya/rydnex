@@ -21,6 +21,7 @@ const routes = {
     forgotPasswordReset: '/app-api/auth/auth/reset-password',
     forgotPassword: '/app-api/auth/auth/forgot-password',
     verifyForgotPasswordOtp: '/app-api/auth/auth/verify-forgot-password-otp',
+    updateUser: '/app-api/database/users/update',
   },
   images: {
     upload: '/app-api/storage/files/upload',
@@ -46,7 +47,10 @@ const routes = {
     vehicleChecks: tableCrud('vehicle_checks'),
     partsLifeRules: tableCrud('parts_life_rules'),
     partReminders: tableCrud('part_reminders'),
+    vehicleIssues: tableCrud('vehicle_issues'),
   },
+  organisations: tableCrud('organisations'),
+  orgJoinRequests: tableCrud('organisation_join_requests'),
 };
 
 export default routes;

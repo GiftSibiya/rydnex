@@ -20,6 +20,7 @@ import { GREEN, GREEN_DARK } from "@/constants/colors";
 import { AuthStore } from "@/stores/StoresIndex";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
+import { takePendingRegistrationLogin } from "@/utilities/registrationPendingLogin";
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
@@ -28,7 +29,8 @@ export default function registerOtpScreen() {
   const styles = useMemo(() => createStyles(C), [C]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { setAuthFromRegistration } = AuthStore();
+  const setAuthFromRegistration = AuthStore((s) => s.setAuthFromRegistration);
+  const setAuthFromLogin = AuthStore((s) => s.setAuthFromLogin);
   const { email, userId } = useLocalSearchParams<{ email: string; userId: string }>();
 
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
@@ -115,9 +117,38 @@ export default function registerOtpScreen() {
         return;
       }
       if (result.data) {
+        takePendingRegistrationLogin();
         setAuthFromRegistration(result.data);
+        router.replace("/(tabs)");
+        return;
       }
-      router.replace("/(tabs)");
+
+      // API often returns success with `data: {}` after verify — complete session via login.
+      const creds = takePendingRegistrationLogin();
+      if (creds) {
+        const loginRes = await authService.login({
+          email: creds.email,
+          password: creds.password,
+        });
+        if (loginRes.success && "data" in loginRes && loginRes.data) {
+          setAuthFromLogin(loginRes.data);
+          router.replace("/(tabs)");
+          return;
+        }
+        setError(
+          loginRes.success === false
+            ? (loginRes.message ?? loginRes.error ?? "Signed up but sign-in failed. Try logging in.")
+            : "Signed up but sign-in failed. Try logging in."
+        );
+        router.replace("/auth/login-screen");
+        return;
+      }
+
+      setError(
+        result.message ??
+          "Email verified. Please sign in with your email and password."
+      );
+      router.replace("/auth/login-screen");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Verification failed");
     } finally {

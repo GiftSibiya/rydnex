@@ -106,6 +106,48 @@ function parseThrownApiBody(err: unknown): Record<string, unknown> | null {
   return null;
 }
 
+/** API may return `user_id` as number or string (JSON). */
+function parseUserId(value: unknown): number | undefined {
+  if (value == null) return undefined;
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+  if (typeof value === 'string') {
+    const n = Number(value.trim());
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return undefined;
+}
+
+/** Register `data` often exposes `user_id` at the top level for OTP flows. */
+function userIdFromRegisterPayload(payloadData: Record<string, unknown> | null | undefined): number | undefined {
+  if (!payloadData) return undefined;
+  const top = parseUserId(payloadData.user_id ?? payloadData.userId);
+  if (top != null) return top;
+  const userData =
+    payloadData.user && typeof payloadData.user === 'object'
+      ? (payloadData.user as Record<string, unknown>)
+      : null;
+  const nested = parseUserId(userData?.id);
+  if (nested != null) return nested;
+  return parseUserId(payloadData.id);
+}
+
+/**
+ * Some responses put `user_id` on the JSON root; others only under `data`
+ * (see client-sdk-mobile `01-AUTH-REQUESTS.md` register / verify-otp flow).
+ */
+function userIdFromRegisterApiResponse(res: Record<string, unknown>): number | undefined {
+  const data =
+    res.data != null && typeof res.data === 'object' ? (res.data as Record<string, unknown>) : null;
+  const fromData = userIdFromRegisterPayload(data);
+  if (fromData != null) return fromData;
+  return parseUserId(res.user_id ?? res.userId);
+}
+
+/** `verify-otp` body sends `otp` as a string (trimmed), never a number. */
+function otpForVerifyRequest(otp: string): string {
+  return otp.trim();
+}
+
 class AuthService {
   async login(payload: LoginPayload): Promise<LoginResult> {
     if (STATIC_DATA_MODE) {
@@ -148,6 +190,26 @@ class AuthService {
         return { success: true, data: mapped } as ApiResponseType<LoginResponseData>;
       }
 
+      const requiresOtp =
+        payloadData?.requires_otp === true || payloadData?.requiresOtp === true;
+      const userFromPayload =
+        payloadData?.user && typeof payloadData.user === 'object'
+          ? (payloadData.user as Record<string, unknown>)
+          : null;
+      const userId = parseUserId(
+        payloadData?.user_id ?? payloadData?.userId ?? userFromPayload?.id
+      );
+      if (requiresOtp && userId != null) {
+        return {
+          success: false,
+          message: res.message ?? 'Check your email for a verification code.',
+          data: null,
+          requiresOtp: true,
+          otpEmail: String(payloadData?.email ?? payload.email.trim()),
+          userId,
+        };
+      }
+
       return {
         success: false,
         message: res.message ?? 'Login failed',
@@ -161,15 +223,13 @@ class AuthService {
           ? (body.data as Record<string, unknown>)
           : null;
       const requiresOtp =
-        nested?.requires_otp === true || body?.requires_otp === true;
+        nested?.requires_otp === true ||
+        body?.requires_otp === true ||
+        nested?.requiresOtp === true ||
+        body?.requiresOtp === true;
       const otpEmail =
         (nested?.email as string) ?? (body?.email as string) ?? payload.email.trim();
-      const userId =
-        typeof nested?.user_id === 'number'
-          ? nested.user_id
-          : typeof body?.user_id === 'number'
-            ? (body.user_id as number)
-            : undefined;
+      const userId = parseUserId(nested?.user_id ?? body?.user_id ?? nested?.userId ?? body?.userId);
 
       if (requiresOtp) {
         return {
@@ -188,16 +248,15 @@ class AuthService {
 
   async register(payload: RegisterPayload): Promise<RegisterResult> {
     if (STATIC_DATA_MODE) {
-      const data: RegistrationResponseData = {
-        user: {
-          id: 1,
-          name: payload.name || 'Rydnex Driver',
-          email: payload.email || 'driver@rydnex.local',
-          roles: [{ id: 1, role_key: 'user', role_name: 'User' }],
-        },
-        accessToken: 'static-mode-access-token',
+      // Mirror production: register then verify-otp (`POST .../verify-otp` with `{ user_id, otp }`).
+      return {
+        success: true,
+        requiresOtp: true,
+        message: 'Check your email for a verification code.',
+        data: null,
+        userId: 999001,
+        email: payload.email.trim(),
       };
-      return { success: true, data } as ApiResponseType<RegistrationResponseData>;
     }
 
     try {
@@ -222,29 +281,45 @@ class AuthService {
         };
       }
 
+      const root = res as unknown as Record<string, unknown>;
       const payloadData = res.data as Record<string, unknown> | null | undefined;
       const mapped = registrationDataFromApi(payloadData ?? null);
+
+      // We always send `otp_method: 'email'`. Some backends still return `user` + accessToken on
+      // register; the session must only be applied after `verify-otp`, so never short-circuit to
+      // `data` here when we can continue with a user id.
+      let userId =
+        userIdFromRegisterApiResponse(root) ??
+        (mapped?.user?.id != null && Number.isFinite(mapped.user.id) ? mapped.user.id : undefined);
+
+      if (userId != null) {
+        const userObj =
+          payloadData?.user && typeof payloadData.user === 'object'
+            ? (payloadData.user as Record<string, unknown>)
+            : null;
+        return {
+          success: true,
+          requiresOtp: true,
+          message: res.message ?? 'Check your email for a verification code.',
+          data: null,
+          userId,
+          email: String(
+            userObj?.email ?? payloadData?.email ?? root.email ?? mapped?.user?.email ?? payload.email.trim()
+          ),
+        };
+      }
+
       if (mapped) {
         return { success: true, data: mapped } as ApiResponseType<RegistrationResponseData>;
       }
-      const userData =
-        payloadData?.user && typeof payloadData.user === 'object'
-          ? (payloadData.user as Record<string, unknown>)
-          : null;
-      const userId =
-        userData?.id != null
-          ? Number(userData.id)
-          : payloadData?.user_id != null
-            ? Number(payloadData.user_id)
-            : undefined;
 
       return {
         success: true,
         requiresOtp: true,
         message: res.message ?? 'Check your email for a verification code.',
         data: null,
-        userId: Number.isFinite(userId) ? userId : undefined,
-        email: payload.email.trim(),
+        userId: undefined,
+        email: String(payloadData?.email ?? root.email ?? payload.email.trim()),
       };
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Registration failed';
@@ -254,13 +329,15 @@ class AuthService {
           ? (body.data as Record<string, unknown>)
           : null;
       const requiresOtp =
-        nested?.requires_otp === true || body?.requires_otp === true;
+        nested?.requires_otp === true ||
+        body?.requires_otp === true ||
+        nested?.requiresOtp === true ||
+        body?.requiresOtp === true;
+      const mergedRoot: Record<string, unknown> = { ...(body ?? {}), ...(nested ?? {}) };
       const userId =
-        typeof nested?.user_id === 'number'
-          ? nested.user_id
-          : typeof body?.user_id === 'number'
-            ? (body.user_id as number)
-            : undefined;
+        userIdFromRegisterApiResponse(mergedRoot) ??
+        userIdFromRegisterPayload(nested) ??
+        userIdFromRegisterPayload(body);
 
       if (requiresOtp) {
         return {
@@ -269,7 +346,9 @@ class AuthService {
           message,
           data: null,
           userId,
-          email: payload.email.trim(),
+          email: String(
+            (nested?.email as string) ?? (body?.email as string) ?? payload.email.trim()
+          ),
         };
       }
 
@@ -298,9 +377,10 @@ class AuthService {
     }
 
     try {
+      const verifyBody = { user_id: userId, otp: otpForVerifyRequest(otp) };
       const res = await skaftinClient.post<Record<string, unknown>>(
         routes.auth.verifyOtp,
-        { user_id: userId, otp: otp.trim() },
+        verifyBody,
         { skipUserAuthorization: true }
       );
 

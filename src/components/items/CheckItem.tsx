@@ -7,7 +7,8 @@ import { AppThemeColors } from "@/themes/theme";
 type Props = {
   label: string;
   lastDate: string | null;
-  onMark: () => void;
+  /** Omit for read-only (e.g. organisation fleet view). */
+  onMark?: () => void;
 };
 
 function daysSince(dateStr: string): number {
@@ -32,10 +33,12 @@ export default function CheckItem({ label, lastDate, onMark }: Props) {
         <Text style={styles.label}>{label}</Text>
         <Text style={[styles.status, { color }]}>{statusText}</Text>
       </View>
-      <TouchableOpacity style={styles.btn} onPress={onMark} activeOpacity={0.7}>
-        <Feather name="check" size={14} color={C.tint} />
-        <Text style={styles.btnText}>Mark OK</Text>
-      </TouchableOpacity>
+      {onMark ? (
+        <TouchableOpacity style={styles.btn} onPress={onMark} activeOpacity={0.7}>
+          <Feather name="check" size={14} color={C.tint} />
+          <Text style={styles.btnText}>Mark OK</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }

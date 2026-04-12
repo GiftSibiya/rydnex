@@ -8,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import AppButton from "@/components/buttons/AppButton";
+import AppLabeledInput from "@/components/forms/AppLabeledInput";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
 
@@ -27,7 +27,6 @@ export default function loginScreen() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -41,6 +40,14 @@ export default function loginScreen() {
     setLoading(false);
     if (result.success) {
       router.replace("/(tabs)");
+    } else if (result.requiresOtp && result.userId != null) {
+      router.push({
+        pathname: "/auth/register-otp-screen",
+        params: {
+          userId: String(result.userId),
+          email: result.otpEmail ?? email.trim(),
+        },
+      });
     } else {
       setError(result.error ?? "Login failed");
     }
@@ -58,14 +65,6 @@ export default function loginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Feather name="arrow-left" size={20} color={C.text} />
-        </TouchableOpacity>
-
       <View style={styles.header}>
         <LinearGradient
           colors={[GREEN, GREEN_DARK]}
@@ -80,54 +79,28 @@ export default function loginScreen() {
       </View>
 
       <View style={styles.form}>
-        <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>Email</Text>
-          <View style={[styles.inputRow, error && styles.inputError]}>
-            <Feather name="mail" size={16} color={C.textSubtle} />
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor={C.textSubtle}
-              value={email}
-              onChangeText={(t) => {
-                setEmail(t);
-                setError("");
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-          </View>
-        </View>
+        <AppLabeledInput
+          label="Email"
+          value={email}
+          onChangeText={(t) => { setEmail(t); setError(""); }}
+          placeholder="you@example.com"
+          icon="mail"
+          keyboardType="email-address"
+          autoComplete="email"
+          autoCapitalize="none"
+          error={error ? " " : undefined}
+        />
 
-        <View style={styles.inputWrap}>
-          <Text style={styles.inputLabel}>Password</Text>
-          <View style={[styles.inputRow, error && styles.inputError]}>
-            <Feather name="lock" size={16} color={C.textSubtle} />
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={C.textSubtle}
-              value={password}
-              onChangeText={(t) => {
-                setPassword(t);
-                setError("");
-              }}
-              secureTextEntry={!showPass}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity
-              onPress={() => setShowPass(!showPass)}
-              activeOpacity={0.7}
-            >
-              <Feather
-                name={showPass ? "eye-off" : "eye"}
-                size={16}
-                color={C.textSubtle}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <AppLabeledInput
+          label="Password"
+          value={password}
+          onChangeText={(t) => { setPassword(t); setError(""); }}
+          placeholder="••••••••"
+          icon="lock"
+          secure
+          autoCapitalize="none"
+          error={error ? " " : undefined}
+        />
 
         {error ? (
           <View style={styles.errorBanner}>
@@ -164,7 +137,7 @@ export default function loginScreen() {
         <View style={styles.securityNote}>
           <Feather name="shield" size={13} color={C.textSubtle} />
           <Text style={styles.securityText}>
-            Your data stays on your device. No cloud sync yet.
+            Your data is stored securely on our servers.
           </Text>
         </View>
       </ScrollView>
@@ -211,32 +184,6 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     color: C.textMuted,
   },
   form: { gap: 16 },
-  inputWrap: { gap: 6 },
-  inputLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: C.surfaceElevated,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.surfaceBorder,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  inputError: { borderColor: C.danger },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    color: C.text,
-  },
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",

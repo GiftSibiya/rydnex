@@ -8,55 +8,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/contexts/AuthContext";
+import AppLabeledInput from "@/components/forms/AppLabeledInput";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
-
-type FieldProps = {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder?: string;
-  keyboardType?: "default" | "email-address";
-  secure?: boolean;
-  autoCapitalize?: "none" | "words";
-  hint?: string;
-};
-
-function Field({ label, value, onChangeText, placeholder, keyboardType = "default", secure, autoCapitalize, hint }: FieldProps) {
-  const { colors: C } = useAppTheme();
-  const styles = useMemo(() => createStyles(C), [C]);
-  const [hidden, setHidden] = useState(!!secure);
-  return (
-    <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.inputWrap}>
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={C.textSubtle}
-          keyboardType={keyboardType}
-          secureTextEntry={hidden}
-          autoCapitalize={autoCapitalize ?? "none"}
-          autoCorrect={false}
-        />
-        {secure && (
-          <TouchableOpacity style={styles.eyeBtn} onPress={() => setHidden(h => !h)}>
-            <Feather name={hidden ? "eye" : "eye-off"} size={16} color={C.textSubtle} />
-          </TouchableOpacity>
-        )}
-      </View>
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
-    </View>
-  );
-}
 
 export default function editAccountScreen() {
   const { colors: C } = useAppTheme();
@@ -122,7 +81,8 @@ export default function editAccountScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Identity</Text>
           <View style={styles.card}>
-            <Field
+            <AppLabeledInput
+              variant="flat"
               label="Display Name"
               value={name}
               onChangeText={setName}
@@ -130,7 +90,8 @@ export default function editAccountScreen() {
               autoCapitalize="words"
             />
             <View style={styles.fieldDivider} />
-            <Field
+            <AppLabeledInput
+              variant="flat"
               label="Email"
               value={email}
               onChangeText={setEmail}
@@ -143,7 +104,8 @@ export default function editAccountScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Change Password</Text>
           <View style={styles.card}>
-            <Field
+            <AppLabeledInput
+              variant="flat"
               label="New Password"
               value={newPassword}
               onChangeText={setNewPassword}
@@ -154,7 +116,8 @@ export default function editAccountScreen() {
             {newPassword.length > 0 && (
               <>
                 <View style={styles.fieldDivider} />
-                <Field
+                <AppLabeledInput
+                  variant="flat"
                   label="Confirm Password"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -220,18 +183,6 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     overflow: "hidden",
   },
 
-  fieldWrap: { paddingHorizontal: 16, paddingVertical: 14, gap: 6 },
-  fieldLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.textSubtle, letterSpacing: 0.5, textTransform: "uppercase" },
-  inputWrap: { flexDirection: "row", alignItems: "center" },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: C.text,
-    paddingVertical: 0,
-  },
-  eyeBtn: { paddingLeft: 8 },
-  fieldHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSubtle },
   fieldDivider: { height: 1, backgroundColor: C.separator, marginHorizontal: 16 },
 
   errorBox: {

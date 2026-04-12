@@ -18,3 +18,7 @@ export { default as LogBookItem } from './items/LogBookItem';
 // ---------- BUTTONS ---------- //
 export { default as GoldButton } from './buttons/GoldButton';
 export { default as AppButton } from './buttons/AppButton';
+
+// ---------- FORMS ---------- //
+export { default as AppText } from './forms/AppText';
+export { default as AppLabeledInput } from './forms/AppLabeledInput';

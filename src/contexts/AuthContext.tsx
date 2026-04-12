@@ -2,14 +2,26 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { authService } from "@/backend";
 import { AuthStore } from "@/stores/StoresIndex";
 
+type LoginOutcome = {
+  success: boolean;
+  error?: string;
+  /** Server requires email OTP before issuing a session; use `userId` with verify-otp. */
+  requiresOtp?: boolean;
+  userId?: number;
+  otpEmail?: string;
+};
+
 type AuthContextType = {
   isLoggedIn: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<LoginOutcome>;
   logout: () => Promise<void>;
   updateAccount: (data: { name?: string; email?: string; password?: string }) => Promise<{ success: boolean; error?: string }>;
   userEmail: string | null;
   userName: string | null;
+  isPro: boolean;
+  isOrgAdmin: boolean;
+  organisationId: number | null;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -18,6 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const accessToken = AuthStore((state) => state.accessToken);
   const user = AuthStore((state) => state.user);
   const { setAuthFromLogin, updateUser } = AuthStore();
+  const isPro = AuthStore((state) => state.isPro());
+  const isOrgAdmin = AuthStore((state) => state.isOrgAdmin());
+  const organisationId = AuthStore((state) => state.user?.organisation_id ?? null);
   const [isLoading, setIsLoading] = useState(true);
   const isLoggedIn = !!accessToken;
   const userEmail = user?.email ?? null;
@@ -56,6 +71,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
       if (!response.success) {
+        if ("requiresOtp" in response && response.requiresOtp && response.userId != null) {
+          return {
+            success: false,
+            requiresOtp: true,
+            userId: response.userId,
+            otpEmail: response.otpEmail ?? email.trim(),
+            error: response.message ?? response.error,
+          };
+        }
         return { success: false, error: response.message ?? response.error ?? "Login failed" };
       }
       setAuthFromLogin(response.data);
@@ -93,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (isLoading) return null;
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, login, logout, updateAccount, userEmail, userName }}>
+    <AuthContext.Provider value={{ isLoggedIn, isLoading, login, logout, updateAccount, userEmail, userName, isPro, isOrgAdmin, organisationId }}>
       {children}
     </AuthContext.Provider>
   );

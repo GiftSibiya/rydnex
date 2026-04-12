@@ -14,8 +14,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import skaftinClient from "@/backend/client/SkaftinClient";
-import routes from "@/constants/ApiRoutes";
 import {
   REPAIR_ITEM_CATALOG,
   RepairItemCategoryId,
@@ -24,6 +22,7 @@ import {
   ServiceItemCategoryId,
 } from "@/constants/Constants";
 import { useVehicle } from "@/contexts/VehicleContext";
+import { useLogLinkedItems } from "@/hooks/useLogLinkedItems";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
 
@@ -155,9 +154,20 @@ type LogBookItemParams =
       serviceItemSlugs?: string | string[];
       repairItemNames?: string | string[];
       repairItemSlugs?: string | string[];
+      readOnly?: string | string[];
     }
-  | { _type: "fuel"; id: string; date: string; liters: string; costPerLiter: string; totalCost: string; odometer: string; fullTank: string }
-  | { _type: "odometer"; id: string; date: string; reading: string; note?: string };
+  | {
+      _type: "fuel";
+      id: string;
+      date: string;
+      liters: string;
+      costPerLiter: string;
+      totalCost: string;
+      odometer: string;
+      fullTank: string;
+      readOnly?: string | string[];
+    }
+  | { _type: "odometer"; id: string; date: string; reading: string; note?: string; readOnly?: string | string[] };
 
 function parseListValue(value?: string | string[]): string[] {
   if (!value) return [];
@@ -241,7 +251,14 @@ export default function LogBookItemRoute() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const readOnlyRaw = "readOnly" in params ? params.readOnly : undefined;
+  const readOnly =
+    readOnlyRaw === "1" ||
+    readOnlyRaw === "true" ||
+    (Array.isArray(readOnlyRaw) && (readOnlyRaw[0] === "1" || readOnlyRaw[0] === "true"));
+
   const handleDelete = () => {
+    if (readOnly) return;
     Alert.alert("Delete entry", "Are you sure you want to delete this log entry?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -257,6 +274,7 @@ export default function LogBookItemRoute() {
   };
 
   const handleEdit = () => {
+    if (readOnly) return;
     router.push({
       pathname: "/log/subpages/logbook-item-edit-page",
       params: params as unknown as Record<string, string>,
@@ -266,9 +284,6 @@ export default function LogBookItemRoute() {
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const headerScale = useRef(new Animated.Value(0.96)).current;
 
-  const [fetchedItemNames, setFetchedItemNames] = useState<string[]>([]);
-  const [itemsLoading, setItemsLoading] = useState(false);
-
   const isService = params._type === "service";
   const isFuel = params._type === "fuel";
   const isOdometer = params._type === "odometer";
@@ -277,52 +292,10 @@ export default function LogBookItemRoute() {
     : undefined;
   const isRepairEntry = serviceLogType === "repair";
 
-  useEffect(() => {
-    if (!isService || serviceLogType == null) return;
-    const rawId = params.id;
-    const dbId =
-      rawId.startsWith("s-") || rawId.startsWith("r-")
-        ? Number(rawId.slice(2))
-        : Number(rawId);
-    if (!dbId || isNaN(dbId)) return;
-
-    setItemsLoading(true);
-    const linksRoute = isRepairEntry
-      ? routes.maintenance.repairLogItems.list
-      : routes.maintenance.serviceLogItems.list;
-    const linksWhere = isRepairEntry
-      ? { repair_log_id: dbId }
-      : { service_log_id: dbId };
-    const itemsRoute = isRepairEntry
-      ? routes.reference.repairItems.list
-      : routes.reference.serviceItems.list;
-    const itemIdKey = isRepairEntry ? "repair_item_id" : "service_item_id";
-
-    skaftinClient
-      .post<Record<string, any>[]>(linksRoute, { where: linksWhere })
-      .then(async (linksRes) => {
-        const links = Array.isArray(linksRes.data) ? linksRes.data : [];
-        if (links.length === 0) {
-          setItemsLoading(false);
-          return;
-        }
-
-        const itemIds = links.map((l) => Number(l[itemIdKey])).filter((id) => !Number.isNaN(id));
-        const itemsRes = await skaftinClient.post<Record<string, any>[]>(
-          itemsRoute,
-          {},
-        );
-        const allItems = Array.isArray(itemsRes.data) ? itemsRes.data : [];
-        const names = allItems
-          .filter((i) => itemIds.includes(i.id as number))
-          .map((i) => String(i.name));
-        setFetchedItemNames(names);
-      })
-      .catch(() => {
-        // silently fall back to params
-      })
-      .finally(() => setItemsLoading(false));
-  }, [isService, isRepairEntry, params.id, serviceLogType]);
+  const { linkedNames, loading: itemsLoading, error: linkFetchError } = useLogLinkedItems(
+    isService && params.id ? String(params.id) : undefined,
+    isRepairEntry ? "repair" : "service"
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -356,9 +329,15 @@ export default function LogBookItemRoute() {
         ? parseListValue(params.repairItemSlugs)
         : parseListValue(params.serviceItemSlugs))
     : [];
-  const displayItems = fetchedItemNames.length > 0
-    ? fetchedItemNames
-    : paramNames.length > 0 ? paramNames : paramSlugs;
+  const displayItems = useMemo(() => {
+    if (linkedNames.length > 0) return linkedNames;
+    if (itemsLoading) return [];
+    if (linkFetchError) {
+      if (paramNames.length > 0) return paramNames;
+      if (paramSlugs.length > 0) return paramSlugs;
+    }
+    return [];
+  }, [linkedNames, itemsLoading, linkFetchError, paramNames, paramSlugs]);
 
   const catalogLabels = useMemo(
     () => displayItems.map((s) => String(s).trim()).filter(Boolean),
@@ -393,6 +372,12 @@ export default function LogBookItemRoute() {
           <Feather name={iconName} size={30} color={accentColor} />
         </View>
         <Text style={styles.heroTitle}>{title}</Text>
+        {readOnly ? (
+          <View style={[styles.viewOnlyPill, { borderColor: `${C.info}35`, backgroundColor: `${C.info}12` }]}>
+            <Feather name="eye" size={11} color={C.info} />
+            <Text style={[styles.viewOnlyPillText, { color: C.info }]}>View only</Text>
+          </View>
+        ) : null}
         <View style={[styles.datePill, { backgroundColor: `${accentColor}12`, borderColor: `${accentColor}25` }]}>
           <Feather name="calendar" size={11} color={accentColor} />
           <Text style={[styles.datePillText, { color: accentColor }]}>{formattedDate}</Text>
@@ -572,18 +557,22 @@ export default function LogBookItemRoute() {
         </>
       )}
 
-      <View style={[styles.actionRow, { paddingBottom: bottomPad + 16 }]}>
-        <TouchableOpacity style={styles.editBtn} onPress={handleEdit} activeOpacity={0.8}>
-          <Feather name="edit-2" size={15} color={C.text} />
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
-        {params._type !== "odometer" && (
-          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.8}>
-            <Feather name="trash-2" size={15} color={C.danger} />
-            <Text style={styles.deleteBtnText}>Delete</Text>
+      {!readOnly ? (
+        <View style={[styles.actionRow, { paddingBottom: bottomPad + 16 }]}>
+          <TouchableOpacity style={styles.editBtn} onPress={handleEdit} activeOpacity={0.8}>
+            <Feather name="edit-2" size={15} color={C.text} />
+            <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
-        )}
-      </View>
+          {params._type !== "odometer" && (
+            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.8}>
+              <Feather name="trash-2" size={15} color={C.danger} />
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <View style={{ paddingBottom: bottomPad + 24 }} />
+      )}
     </ScrollView>
   );
 }
@@ -628,6 +617,21 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: C.text,
     letterSpacing: -0.5,
+  },
+  viewOnlyPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  viewOnlyPillText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   datePill: {
     flexDirection: "row",

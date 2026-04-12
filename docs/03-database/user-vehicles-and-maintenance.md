@@ -23,7 +23,7 @@ One row per vehicle owned by an app user.
 | **License disk (denormalised on vehicle)** | | Simple path: no separate disk table |
 | `license_expiry_date` | timestamptz nullable | |
 | `license_engine_number` | varchar(100) nullable | |
-| `license_fees` | integer nullable | |
+| `license_fees` | numeric(12,2) nullable | Decimal fee amount (not currency-formatted in UI) |
 | `license_test_date` | date nullable | |
 | `license_disk_number` | varchar(100) nullable | |
 | `created_at`, `updated_at` | timestamptz NOT NULL | |
@@ -114,6 +114,10 @@ Row per check event (not a single wide row per vehicle). Latest row per `(vehicl
 ### `part_reminders`
 
 Defined for generated reminders; API routes exist under `routes.maintenance.partReminders`. The Garage `VehicleContext` may not sync this table yet.
+
+### `vehicle_issues`
+
+User-managed backlog (“look at later”) per vehicle: title, optional description, `open` / `resolved`, optional odometer when noted, optional `repair_item_id` link to `repair_items`. See [`vehicle-issues.md`](./vehicle-issues.md).
 
 ## API routes (app client)
 
