@@ -1,6 +1,10 @@
 import skaftinClient from '@/backend/client/SkaftinClient';
 import routes from '@/constants/ApiRoutes';
 import { GOOGLE_SIGN_IN_ENABLED, STATIC_DATA_MODE } from '@/constants/AppConfig';
+import {
+  googleSignInAccountKindFromApi,
+  type GoogleSignInAccountKind,
+} from '@/utils/googleSignInMessages';
 import type {
   ApiResponseType,
   AuthOrganisation,
@@ -14,7 +18,13 @@ type LoginPayload = { email: string; password: string };
 type RegisterPayload = { name: string; email: string; password: string };
 
 export type GoogleSignInResult =
-  | { success: true; data: LoginResponseData; message?: string; error?: string }
+  | {
+      success: true;
+      data: LoginResponseData;
+      googleAccountKind: GoogleSignInAccountKind;
+      message?: string;
+      error?: string;
+    }
   | { success: false; message?: string; error?: string; data: null };
 
 /** When register succeeds but email OTP is required before a session exists. */
@@ -462,7 +472,7 @@ class AuthService {
         },
         accessToken: 'static-mode-access-token',
       };
-      return { success: true, data };
+      return { success: true, data, googleAccountKind: 'existing' };
     }
 
     if (!GOOGLE_SIGN_IN_ENABLED) {
@@ -487,7 +497,12 @@ class AuthService {
       const payloadData = res.data as Record<string, unknown> | null | undefined;
       const mapped = loginDataFromApi(payloadData ?? null);
       if (mapped) {
-        return { success: true, data: mapped };
+        return {
+          success: true,
+          data: mapped,
+          googleAccountKind: googleSignInAccountKindFromApi(payloadData ?? null),
+          message: res.message,
+        };
       }
 
       return { success: false, message: res.message ?? 'Google sign-in failed', data: null };

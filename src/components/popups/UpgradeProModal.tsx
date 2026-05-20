@@ -38,7 +38,7 @@ type Props = {
   onConfirm: (tier: OrgTier) => void;
 };
 
-export default function UpgradeProModal({ visible, onClose, onConfirm }: Props) {
+export default function UpgradeProModal({ visible, onClose, onConfirm: _onConfirm }: Props) {
   const { colors: C } = useAppTheme();
   const styles = useMemo(() => createStyles(C), [C]);
   const [selectedTier, setSelectedTier] = useState<OrgTier>("bronze");
@@ -83,8 +83,14 @@ export default function UpgradeProModal({ visible, onClose, onConfirm }: Props) 
 
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO</Text>
+            <View style={styles.badgeRow}>
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+              <View style={styles.comingSoonBadge}>
+                <Feather name="clock" size={10} color={C.textSubtle} />
+                <Text style={styles.comingSoonText}>Coming Soon</Text>
+              </View>
             </View>
             <Text style={styles.title}>Upgrade to Pro</Text>
             <Text style={styles.subtitle}>
@@ -124,15 +130,16 @@ export default function UpgradeProModal({ visible, onClose, onConfirm }: Props) 
 
           {/* Confirm */}
           <TouchableOpacity
-            style={styles.confirmBtn}
-            activeOpacity={0.85}
-            onPress={() => onConfirm(selectedTier)}
+            style={[styles.confirmBtn, styles.confirmBtnDisabled]}
+            activeOpacity={1}
+            disabled
           >
-            <Text style={styles.confirmText}>Upgrade to {selectedTier.charAt(0).toUpperCase() + selectedTier.slice(1)}</Text>
+            <Feather name="clock" size={14} color="#fff" style={{ marginRight: 6 }} />
+            <Text style={styles.confirmText}>Coming Soon</Text>
           </TouchableOpacity>
 
           <Text style={styles.finePrint}>
-            Contact your administrator to manage billing and permissions.
+            Pro plans are on the way. We'll notify you when they're available.
           </Text>
         </Animated.View>
       </GestureDetector>
@@ -170,6 +177,28 @@ const createStyles = (C: AppThemeColors) =>
     header: {
       alignItems: "center",
       gap: 8,
+    },
+    badgeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    comingSoonBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: C.surfaceAlt,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: C.surfaceBorder,
+    },
+    comingSoonText: {
+      fontSize: 11,
+      fontFamily: "Inter_500Medium",
+      color: C.textSubtle,
+      letterSpacing: 0.3,
     },
     proBadge: {
       backgroundColor: "rgba(245,158,11,0.12)",
@@ -252,6 +281,11 @@ const createStyles = (C: AppThemeColors) =>
       borderRadius: 12,
       paddingVertical: 14,
       alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
+    },
+    confirmBtnDisabled: {
+      opacity: 0.5,
     },
     confirmText: {
       fontSize: 15,

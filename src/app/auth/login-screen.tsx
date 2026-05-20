@@ -21,6 +21,8 @@ import {
 import { GOOGLE_SIGN_IN_ENABLED } from "@/constants/AppConfig";
 import { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
+import { ToastStateStore } from "@/stores/StoresIndex";
+import { googleSignInSuccessToastMessage } from "@/utils/googleSignInMessages";
 import AppButton from "@/components/buttons/AppButton";
 import AppLabeledInput from "@/components/forms/AppLabeledInput";
 import { useAppTheme } from "@/themes/AppTheme";
@@ -30,6 +32,7 @@ export default function loginScreen() {
   const { colors: C } = useAppTheme();
   const styles = useMemo(() => createStyles(C), [C]);
   const { login, loginWithGoogle } = useAuth();
+  const { showToast } = ToastStateStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
@@ -51,15 +54,25 @@ export default function loginScreen() {
       if (!idToken) throw new Error("No ID token returned from Google");
       const result = await loginWithGoogle(idToken);
       if (result.success) {
+        const kind = result.googleAccountKind ?? "existing";
+        showToast({
+          message: googleSignInSuccessToastMessage(kind, "login"),
+          type: "success",
+          duration: 2800,
+        });
         router.replace("/(tabs)");
       } else {
-        setError(result.error ?? "Google sign-in failed");
+        const msg = result.error ?? "Google sign-in failed";
+        setError(msg);
+        showToast({ message: msg, type: "error" });
       }
     } catch (e: unknown) {
       if ((e as any)?.code === statusCodes.SIGN_IN_CANCELLED) {
         // user dismissed — do nothing
       } else {
-        setError(e instanceof Error ? e.message : "Google sign-in failed");
+        const msg = e instanceof Error ? e.message : "Google sign-in failed";
+        setError(msg);
+        showToast({ message: msg, type: "error" });
       }
     } finally {
       setGoogleLoading(false);

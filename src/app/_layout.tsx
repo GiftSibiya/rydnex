@@ -21,6 +21,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Platform } from "react-native";
 
+import PopUpWrapper from "@/components/popups/PopUpWrapper";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import FuelPricesSync from "@/components/boot/FuelPricesSync";
@@ -118,10 +119,14 @@ export default function RootLayout() {
                 <VehicleProvider>
                   <FuelPricesSync />
                   {Platform.OS === "web" ? (
-                    <RootLayoutNav />
+                    <>
+                      <RootLayoutNav />
+                      <PopUpWrapper />
+                    </>
                   ) : (
                     <KeyboardProvider>
                       <RootLayoutNav />
+                      <PopUpWrapper />
                     </KeyboardProvider>
                   )}
                 </VehicleProvider>

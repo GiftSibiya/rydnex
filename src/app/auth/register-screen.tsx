@@ -24,6 +24,8 @@ import { authService } from "@/backend";
 import { GOOGLE_SIGN_IN_ENABLED } from "@/constants/AppConfig";
 import { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
+import { ToastStateStore } from "@/stores/StoresIndex";
+import { googleSignInSuccessToastMessage } from "@/utils/googleSignInMessages";
 import { AuthStore } from "@/stores/StoresIndex";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
@@ -37,6 +39,7 @@ export default function registerScreen() {
   const styles = useMemo(() => createStyles(C), [C]);
   const setAuthFromRegistration = AuthStore((s) => s.setAuthFromRegistration);
   const { loginWithGoogle } = useAuth();
+  const { showToast } = ToastStateStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
@@ -92,15 +95,25 @@ export default function registerScreen() {
       if (!idToken) throw new Error("No ID token returned from Google");
       const result = await loginWithGoogle(idToken);
       if (result.success) {
+        const kind = result.googleAccountKind ?? "existing";
+        showToast({
+          message: googleSignInSuccessToastMessage(kind, "register"),
+          type: "success",
+          duration: 2800,
+        });
         router.replace("/(tabs)");
       } else {
-        setGoogleError(result.error ?? "Google sign-in failed");
+        const msg = result.error ?? "Google sign-in failed";
+        setGoogleError(msg);
+        showToast({ message: msg, type: "error" });
       }
     } catch (e: unknown) {
       if ((e as any)?.code === statusCodes.SIGN_IN_CANCELLED) {
         // user dismissed — do nothing
       } else {
-        setGoogleError(e instanceof Error ? e.message : "Google sign-in failed");
+        const msg = e instanceof Error ? e.message : "Google sign-in failed";
+        setGoogleError(msg);
+        showToast({ message: msg, type: "error" });
       }
     } finally {
       setGoogleLoading(false);

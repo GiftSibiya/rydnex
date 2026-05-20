@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authService } from "@/backend";
 import { AuthStore } from "@/stores/StoresIndex";
+import type { GoogleSignInAccountKind } from "@/utils/googleSignInMessages";
 
 type LoginOutcome = {
   success: boolean;
@@ -9,6 +10,8 @@ type LoginOutcome = {
   requiresOtp?: boolean;
   userId?: number;
   otpEmail?: string;
+  /** Set after successful Google sign-in when the API created vs returned an existing user. */
+  googleAccountKind?: GoogleSignInAccountKind;
 };
 
 type AuthContextType = {
@@ -68,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: response.message ?? response.error ?? 'Google sign-in failed' };
       }
       setAuthFromLogin(response.data);
-      return { success: true };
+      return { success: true, googleAccountKind: response.googleAccountKind };
     } catch (error: unknown) {
       return { success: false, error: error instanceof Error ? error.message : 'Google sign-in failed' };
     }
