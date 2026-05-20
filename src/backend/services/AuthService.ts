@@ -1,6 +1,6 @@
 import skaftinClient from '@/backend/client/SkaftinClient';
 import routes from '@/constants/ApiRoutes';
-import { STATIC_DATA_MODE } from '@/constants/AppConfig';
+import { GOOGLE_SIGN_IN_ENABLED, STATIC_DATA_MODE } from '@/constants/AppConfig';
 import type {
   ApiResponseType,
   AuthOrganisation,
@@ -12,6 +12,10 @@ import type {
 
 type LoginPayload = { email: string; password: string };
 type RegisterPayload = { name: string; email: string; password: string };
+
+export type GoogleSignInResult =
+  | { success: true; data: LoginResponseData; message?: string; error?: string }
+  | { success: false; message?: string; error?: string; data: null };
 
 /** When register succeeds but email OTP is required before a session exists. */
 export type RegisterResult =
@@ -444,6 +448,55 @@ class AuthService {
       }
       // Network error or server error — don't treat as expired
       return { success: false, expired: false };
+    }
+  }
+
+  async loginWithGoogle(idToken: string): Promise<GoogleSignInResult> {
+    if (STATIC_DATA_MODE) {
+      const data: LoginResponseData = {
+        user: {
+          id: 1,
+          name: 'Google User',
+          email: 'google@rydnex.local',
+          roles: [{ id: 1, role_key: 'user', role_name: 'User' }],
+        },
+        accessToken: 'static-mode-access-token',
+      };
+      return { success: true, data };
+    }
+
+    if (!GOOGLE_SIGN_IN_ENABLED) {
+      return {
+        success: false,
+        message: 'Google sign-in is disabled in this build.',
+        data: null,
+      };
+    }
+
+    try {
+      const res = await skaftinClient.post<Record<string, unknown>>(
+        routes.auth.googleSignIn,
+        { idToken },
+        { skipUserAuthorization: true }
+      );
+
+      if (!res.success) {
+        return { success: false, message: res.message, error: res.error, data: null };
+      }
+
+      const payloadData = res.data as Record<string, unknown> | null | undefined;
+      const mapped = loginDataFromApi(payloadData ?? null);
+      if (mapped) {
+        return { success: true, data: mapped };
+      }
+
+      return { success: false, message: res.message ?? 'Google sign-in failed', data: null };
+    } catch (e: unknown) {
+      return {
+        success: false,
+        message: e instanceof Error ? e.message : 'Google sign-in failed',
+        data: null,
+      };
     }
   }
 

@@ -15,6 +15,7 @@ type AuthContextType = {
   isLoggedIn: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<LoginOutcome>;
+  loginWithGoogle: (idToken: string) => Promise<LoginOutcome>;
   logout: () => Promise<void>;
   updateAccount: (data: { name?: string; email?: string; password?: string }) => Promise<{ success: boolean; error?: string }>;
   userEmail: string | null;
@@ -59,6 +60,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => unsubscribe();
   }, []);
+
+  const loginWithGoogle = useCallback(async (idToken: string): Promise<LoginOutcome> => {
+    try {
+      const response = await authService.loginWithGoogle(idToken);
+      if (!response.success) {
+        return { success: false, error: response.message ?? response.error ?? 'Google sign-in failed' };
+      }
+      setAuthFromLogin(response.data);
+      return { success: true };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Google sign-in failed' };
+    }
+  }, [setAuthFromLogin]);
 
   const login = useCallback(async (email: string, password: string) => {
     if (!email.trim()) return { success: false, error: "Email is required" };
@@ -117,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (isLoading) return null;
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, login, logout, updateAccount, userEmail, userName, isPro, isOrgAdmin, organisationId }}>
+    <AuthContext.Provider value={{ isLoggedIn, isLoading, login, loginWithGoogle, logout, updateAccount, userEmail, userName, isPro, isOrgAdmin, organisationId }}>
       {children}
     </AuthContext.Provider>
   );

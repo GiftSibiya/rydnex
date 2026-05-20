@@ -17,8 +17,11 @@ import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
 
 export default function SplashScreen() {
-  const { colors: C } = useAppTheme();
+  const { colors: C, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(C), [C]);
+  const bgGradient = isDark
+    ? (["#0D1F12", "#080C09", "#080C09"] as const)
+    : (["#E3F6EA", "#F5FBF7", C.background] as const);
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   const insets = useSafeAreaInsets();
@@ -47,7 +50,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#0D1F12", "#080C09", "#080C09"]}
+        colors={bgGradient}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}

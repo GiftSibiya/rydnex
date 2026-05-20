@@ -22,6 +22,7 @@ const routes = {
     forgotPassword: '/app-api/auth/auth/forgot-password',
     verifyForgotPasswordOtp: '/app-api/auth/auth/verify-forgot-password-otp',
     updateUser: '/app-api/database/users/update',
+    googleSignIn: '/app-api/auth/auth/google-sign-in',
   },
   images: {
     upload: '/app-api/storage/files/upload',

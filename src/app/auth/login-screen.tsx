@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,7 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import GoogleIcon from "@/components/elements/GoogleIcon";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
+import { GOOGLE_SIGN_IN_ENABLED } from "@/constants/AppConfig";
 import { GREEN, GREEN_DARK } from "@/constants/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import AppButton from "@/components/buttons/AppButton";
@@ -22,16 +29,42 @@ import { AppThemeColors } from "@/themes/theme";
 export default function loginScreen() {
   const { colors: C } = useAppTheme();
   const styles = useMemo(() => createStyles(C), [C]);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const user = await GoogleSignin.signIn();
+      const idToken = user.data?.idToken;
+      if (!idToken) throw new Error("No ID token returned from Google");
+      const result = await loginWithGoogle(idToken);
+      if (result.success) {
+        router.replace("/(tabs)");
+      } else {
+        setError(result.error ?? "Google sign-in failed");
+      }
+    } catch (e: unknown) {
+      if ((e as any)?.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user dismissed — do nothing
+      } else {
+        setError(e instanceof Error ? e.message : "Google sign-in failed");
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     setError("");
@@ -120,11 +153,29 @@ export default function loginScreen() {
           style={styles.loginBtn}
         />
 
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
+        {GOOGLE_SIGN_IN_ENABLED ? (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.googleBtn, googleLoading && styles.googleBtnDisabled]}
+              onPress={handleGoogleSignIn}
+              activeOpacity={0.85}
+              disabled={googleLoading || loading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color={C.textMuted} />
+              ) : (
+                <GoogleIcon size={20} />
+              )}
+              <Text style={styles.googleBtnText}>Continue with Google</Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
       </View>
 
       <View style={styles.footer}>
@@ -222,21 +273,25 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: C.textSubtle,
   },
-  guestBtn: {
+  googleBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: C.surfaceBorder,
     paddingVertical: 14,
     backgroundColor: C.surfaceElevated,
+    minHeight: 50,
   },
-  guestBtnText: {
+  googleBtnDisabled: {
+    opacity: 0.7,
+  },
+  googleBtnText: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-    color: C.tint,
+    color: C.text,
   },
   footer: {
     flexDirection: "row",

@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -12,10 +13,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import AppLabeledInput from "@/components/forms/AppLabeledInput";
+import GoogleIcon from "@/components/elements/GoogleIcon";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { authService } from "@/backend";
+import { GOOGLE_SIGN_IN_ENABLED } from "@/constants/AppConfig";
 import { GREEN, GREEN_DARK } from "@/constants/colors";
+import { useAuth } from "@/contexts/AuthContext";
 import { AuthStore } from "@/stores/StoresIndex";
 import { useAppTheme } from "@/themes/AppTheme";
 import { AppThemeColors } from "@/themes/theme";
@@ -28,6 +36,7 @@ export default function registerScreen() {
   const { colors: C } = useAppTheme();
   const styles = useMemo(() => createStyles(C), [C]);
   const setAuthFromRegistration = AuthStore((s) => s.setAuthFromRegistration);
+  const { loginWithGoogle } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
@@ -42,6 +51,8 @@ export default function registerScreen() {
   }>({});
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState("");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -70,6 +81,31 @@ export default function registerScreen() {
       Animated.timing(footerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleError("");
+    setGoogleLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const user = await GoogleSignin.signIn();
+      const idToken = user.data?.idToken;
+      if (!idToken) throw new Error("No ID token returned from Google");
+      const result = await loginWithGoogle(idToken);
+      if (result.success) {
+        router.replace("/(tabs)");
+      } else {
+        setGoogleError(result.error ?? "Google sign-in failed");
+      }
+    } catch (e: unknown) {
+      if ((e as any)?.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user dismissed — do nothing
+      } else {
+        setGoogleError(e instanceof Error ? e.message : "Google sign-in failed");
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const validate = () => {
     const e: typeof errors = {};
@@ -270,6 +306,37 @@ export default function registerScreen() {
               <Text style={styles.errorText}>{formError}</Text>
             </View>
           ) : null}
+
+          {GOOGLE_SIGN_IN_ENABLED ? (
+            <>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.googleBtn, googleLoading && styles.googleBtnDisabled]}
+                onPress={handleGoogleSignIn}
+                activeOpacity={0.85}
+                disabled={googleLoading || loading}
+              >
+                {googleLoading ? (
+                  <ActivityIndicator size="small" color={C.textMuted} />
+                ) : (
+                  <GoogleIcon size={20} />
+                )}
+                <Text style={styles.googleBtnText}>Continue with Google</Text>
+              </TouchableOpacity>
+
+              {googleError ? (
+                <View style={styles.errorBanner}>
+                  <Feather name="alert-circle" size={14} color={C.danger} />
+                  <Text style={styles.errorText}>{googleError}</Text>
+                </View>
+              ) : null}
+            </>
+          ) : null}
         </Animated.View>
 
         {/* Footer */}
@@ -387,6 +454,41 @@ const createStyles = (C: AppThemeColors) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: "#fff",
     letterSpacing: 0.1,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: C.surfaceBorder,
+  },
+  dividerText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: C.textSubtle,
+  },
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.surfaceBorder,
+    paddingVertical: 14,
+    backgroundColor: C.surfaceElevated,
+    minHeight: 50,
+  },
+  googleBtnDisabled: {
+    opacity: 0.7,
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: C.text,
   },
   errorBanner: {
     flexDirection: "row",

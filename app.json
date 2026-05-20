@@ -14,11 +14,12 @@
       "backgroundColor": "#0A0A0B"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bobosoftware.rydnex"
     },
     "android": {
       "backgroundColor": "#0A0A0B",
-      "package": "com.b0b0.rydnex"
+      "package": "com.bobosoftware.rydnex"
     },
     "web": {
       "favicon": "./assets/images/icon.png",
@@ -33,7 +34,13 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.692632366924-0ufuj8nf07k14ddbrdvkud8fi4jsea3a"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
